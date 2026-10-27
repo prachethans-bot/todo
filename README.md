@@ -8,7 +8,7 @@ Todo for ADHD helps users begin overwhelming work with one tiny, concrete action
 - Four modes: `NEW_TASK`, `NEXT_STEP`, `TOO_HARD`, and `TIME_CHECK`.
 - Structured micro-step response with a supportive encouragement and time-estimate prompt.
 - Saved task list stored in browser local storage, including completion and time feedback.
-- Optional reminders with a repeating in-app sound, mobile vibration where supported, and browser notifications. Keep the app open for the reminder to fire; web alarms cannot guarantee delivery when the browser/device is asleep or the app is closed.
+- Optional reminders with repeating in-app sound in web mode, plus native OS-scheduled local notifications when packaged as an Android/iOS app with Capacitor. Native notifications can be delivered while the app is closed, subject to OS permissions and battery/system settings. The browser/PWA fallback is not guaranteed when closed.
 - Supabase email/password authentication.
 - Optional Supabase cloud task sync protected by Row Level Security (RLS).
 - Supabase Edge Function for authenticated AI requests. If no OpenAI key is configured, it returns a safe built-in response.
@@ -91,6 +91,37 @@ If you do not want AI enabled yet, omit the OpenAI key and the authenticated fun
 5. Open the installed app once, allow notifications when prompted after setting a reminder, and test with a reminder one or two minutes ahead.
 
 A deployed HTTPS URL is needed for the most consistent PWA install experience. Installing the PWA does not turn browser timers into guaranteed OS alarms. Test the alarm on each device before relying on it.
+
+## Native phone app and background notifications
+
+For device-scheduled reminders while the app is closed, use the Capacitor native wrapper. This repository includes the Capacitor configuration and notification plugin; native platform projects are generated on your computer.
+
+### Android (Windows laptop)
+
+1. Install Android Studio and its Android SDK: https://developer.android.com/studio
+2. In the project folder, run:
+
+   ```bash
+   npm install
+   npx cap add android
+   npm run cap:sync
+   npx cap open android
+   ```
+
+   If the Android project already exists, skip `npx cap add android`.
+3. In Android Studio, let Gradle finish syncing, connect your Android phone with USB debugging enabled (or use an emulator), and press **Run**.
+4. Accept notification permission on the phone. Create a reminder a few minutes ahead and test it with the app in the background and then closed.
+5. Keep Android and app notification permissions enabled. Some Android versions or battery-saving settings may delay notifications; test on the actual device.
+
+The native local-notification plugin schedules reminders with the operating system. This is a scheduled notification with the system notification sound, not a custom continuously ringing alarm-clock service. Exact delivery can depend on OS settings and permissions.
+
+### iPhone
+
+To build and sign an iOS app, you need a Mac with Xcode. On the Mac, install dependencies, then run `npx cap add ios`, `npm run cap:sync`, and `npx cap open ios`. Configure signing in Xcode and run on your iPhone. iOS controls background notification delivery and sound behavior.
+
+### Web/PWA fallback
+
+On the web, the app plays a repeating in-page sound when the reminder fires, but browser timers can be suspended when the tab is closed, the device sleeps, or the browser is restricted. Use the native app for OS-scheduled reminders.
 
 ## Install and offline basics
 
