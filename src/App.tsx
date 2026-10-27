@@ -23,6 +23,7 @@ import {
 import { ClockPicker } from "./components/ClockPicker";
 import { CountdownRing } from "./components/CountdownRing";
 import { TimedPlanBuilder } from "./components/TimedPlanBuilder";
+import { TaskProofCamera } from "./components/TaskProofCamera";
 
 function formatTime12(time24: string): string {
   const [hStr, mStr] = time24.split(":");
@@ -103,6 +104,7 @@ export default function App() {
   const alarmLoop = useRef<ReturnType<typeof setInterval> | null>(null);
   const alarmAudio = useRef<AudioContext | null>(null);
   const [ringingAlarm, setRingingAlarm] = useState<{ title: string; taskId?: string } | null>(null);
+  const [proofTask, setProofTask] = useState<SavedTask | null>(null);
   // Always-current task list for native listeners / async handlers (avoids stale closures overwriting saved tasks)
   const tasksRef = useRef<SavedTask[]>(tasks);
   tasksRef.current = tasks;
@@ -175,14 +177,8 @@ export default function App() {
       void LocalNotifications.addListener("localNotificationActionPerformed", (action) => {
         const taskId = action.notification.extra?.taskId;
         if (!taskId) return;
-        if (action.actionId === "DONE") {
-          void handleAlarmDone(taskId);
-        } else if (action.actionId === "SNOOZE") {
-          void handleAlarmSnooze(taskId);
-        } else {
-          // Notification body tapped: open the in-app alarm so Done / Snooze are one tap away
-          ringAlarm(action.notification.body || action.notification.title, taskId);
-        }
+        // Notification actions can reopen the alarm, but cannot bypass camera proof.
+        ringAlarm(action.notification.body || action.notification.title, taskId);
       }).then((sub) => {
         actionSub = sub;
       });
@@ -254,21 +250,34 @@ export default function App() {
   }
 
   async function handleAlarmDone(taskId?: string) {
-    stopAlarmSound();
+    // Legacy notification action: never mark a task complete without the camera flow.
     if (taskId) {
-      if (webRepeatTimers.current[taskId]) clearInterval(webRepeatTimers.current[taskId]);
-      delete webRepeatTimers.current[taskId];
-      if (webTimers.current[taskId]) clearTimeout(webTimers.current[taskId]);
-      delete webTimers.current[taskId];
-      await cancelNativeAlarm(taskId);
-
-      setTasks((current) =>
-        current.map((t) => (t.id === taskId ? { ...t, completed: true } : t))
-      );
       const target = tasksRef.current.find((t) => t.id === taskId);
-      if (target) void persistTask({ ...target, completed: true });
-      setNotice("Task marked done. Great momentum!");
+      if (target) setProofTask(target);
     }
+  }
+
+  function beginTaskWithProof(item?: SavedTask) {
+    const target = item ?? (ringingAlarm?.taskId
+      ? tasksRef.current.find((t) => t.id === ringingAlarm.taskId)
+      : tasksRef.current.find((t) => t.title === ringingAlarm?.title));
+    if (!target) {
+      setNotice("Save this task first, then start it with a quick camera check.");
+      return;
+    }
+    setProofTask(target);
+  }
+
+  async function confirmTaskStarted() {
+    const item = proofTask;
+    if (!item) return;
+    stopAlarmSound();
+    await cancelReminder(item.id);
+    const updated = { ...item, reminderAt: null, reminderTime: null };
+    setTasks((current) => current.map((t) => t.id === item.id ? updated : t));
+    await persistTask(updated);
+    setProofTask(null);
+    setNotice("Photo captured in memory only. Alarm stopped — now start your task. It is not marked done.");
   }
 
   async function handleAlarmSnooze(taskId?: string) {
@@ -519,17 +528,8 @@ export default function App() {
             <small>{ringingAlarm.title}</small>
           </span>
           <div className="alarm-banner-actions">
-            <button
-              className="outline alarm-snooze"
-              onClick={() => void handleAlarmSnooze(ringingAlarm.taskId)}
-            >
-              Snooze 5 min
-            </button>
-            <button
-              className="primary alarm-dismiss"
-              onClick={() => void handleAlarmDone(ringingAlarm.taskId)}
-            >
-              Done <Check size={15} />
+            <button className="primary alarm-dismiss" onClick={() => beginTaskWithProof()}>
+              Start task <ArrowRight size={15} />
             </button>
           </div>
         </div>
@@ -775,9 +775,9 @@ export default function App() {
               <button
                 type="button"
                 className="primary right-now-done-btn"
-                onClick={() => void toggleDone(rightNowTask)}
+                onClick={() => beginTaskWithProof(rightNowTask)}
               >
-                Mark done <Check size={15} />
+                Start task <ArrowRight size={15} />
               </button>
             </div>
           </div>
@@ -864,6 +864,8 @@ export default function App() {
           </div>
         )}
       </section>
+
+      {proofTask && <TaskProofCamera taskTitle={proofTask.title} onCancel={() => setProofTask(null)} onConfirm={() => void confirmTaskStarted()} />}
 
       {/* Clock Picker Modal Bottom Sheet */}
       <ClockPicker
