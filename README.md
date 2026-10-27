@@ -1,6 +1,6 @@
-# Stepwise — ADHD-friendly task assistant
+# Todo for ADHD — ADHD-friendly task assistant
 
-Stepwise helps users begin overwhelming work with one tiny, concrete action at a time. It is designed to feel supportive, not demanding.
+Todo for ADHD helps users begin overwhelming work with one tiny, concrete action at a time. It is designed to feel supportive, not demanding.
 
 ## Features in this repository
 
@@ -22,14 +22,14 @@ Stepwise helps users begin overwhelming work with one tiny, concrete action at a
 4. Copy `.env.example` to `.env.local` and add your Supabase project URL and publishable/anon key.
 5. Run `npm run dev`.
 
-The app's local task flow works without Supabase configuration. Authentication, cloud sync and the Edge Function need your Supabase project.
+The local task flow works without Supabase configuration. Guest tasks and each signed-in account have separate local storage. Authentication, cloud sync and the Edge Function need your Supabase project.
 
 ## Supabase setup
 
 1. Create a Supabase project.
 2. In **SQL Editor**, run `supabase/migrations/001_create_tasks.sql`.
 3. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in local `.env.local`.
-4. Deploy the Edge Function named `stepwise-assistant` from `supabase/functions/stepwise-assistant/index.ts`.
+4. Deploy the Edge Function named `todo-adhd-assistant` from `supabase/functions/todo-adhd-assistant/index.ts`.
 5. Set the function secrets:
    - `OPENAI_API_KEY` — optional, for real AI output.
    - `OPENAI_MODEL` — optional; defaults to `gpt-4o-mini`.
@@ -43,7 +43,7 @@ supabase login
 supabase link --project-ref YOUR_PROJECT_REF
 supabase db push
 supabase secrets set OPENAI_API_KEY=YOUR_KEY
-supabase functions deploy stepwise-assistant
+supabase functions deploy todo-adhd-assistant
 ```
 
 If you do not want AI enabled yet, omit the OpenAI key and the authenticated function returns its built-in response. Never put an OpenAI key, service-role key, or other private secret in a `VITE_*` variable or commit it to GitHub.
@@ -57,7 +57,7 @@ npm run preview
 
 ## Known limitations
 
-- The requested 3D David Goggins hero animation is not included. The current hero is a CSS placeholder. Use a properly licensed asset and confirm permission before using a real person's likeness.
+- The hero uses an animated CSS 3D-style abstract portrait, not a photorealistic David Goggins likeness. A true character animation requires a separately created or licensed model/animation asset.
 - Browser notifications require permission, and JavaScript timers may not fire if the browser is closed or suspended. These are gentle reminders, not guaranteed scheduled alarms.
 - Cloud task sync requires the SQL migration and a correctly configured Supabase project.
 - The AI function requires deployment; real AI generation additionally requires an OpenAI API key stored as a server-side secret.
