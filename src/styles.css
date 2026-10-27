@@ -241,8 +241,9 @@ a {
   color: #919d92;
 }
 
+/* Sits above the "left today" badge so it never covers the STAY HARD lettering */
 .f1 {
-  top: 25px;
+  bottom: 64px;
   right: 15px;
 }
 
@@ -258,6 +259,28 @@ a {
   font-size: 9px;
   color: #a4b2a5;
   z-index: 2;
+}
+
+/* Quote sits on the black band directly under the "STAY HARD" lettering of the portrait.
+   The lettering ends at ~20% and the head starts at ~29% of the 300x300 image, so it is
+   positioned in % of the (square) image and sized in container units to scale at any width. */
+.visual {
+  container-type: inline-size;
+}
+
+.hero-quote {
+  position: absolute;
+  top: 20.4%;
+  left: 4%;
+  right: 4%;
+  margin: 0;
+  z-index: 2;
+  text-align: center;
+  font: 600 2.7cqw/1.25 Manrope, sans-serif;
+  letter-spacing: 0.1px;
+  color: #eef2eb;
+  text-shadow: 0 1px 6px #000, 0 0 2px #000;
+  pointer-events: none;
 }
 
 /* "left today" badge in bottom right corner on top of image */
@@ -1434,4 +1457,30 @@ footer b {
   *, *:before, *:after {
     transition: none !important;
   }
+}
+
+.reminder-web-note {
+  display: block;
+  margin-top: 8px;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* Skip link: hidden until focused with the keyboard */
+.skip-link {
+  position: absolute;
+  left: 12px;
+  top: -48px;
+  z-index: 50;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--green);
+  color: #11170e;
+  font-size: 12px;
+  font-weight: 700;
+  transition: top 0.2s;
+}
+.skip-link:focus {
+  top: 8px;
 }

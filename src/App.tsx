@@ -15,6 +15,7 @@ import {
 import {
   setupNotificationChannels,
   requestAlarmPermissions,
+  ALARM_PERMISSION_LINE,
   scheduleNativeAlarm,
   cancelNativeAlarm,
   syncAlarmsOnLaunch
@@ -108,6 +109,10 @@ export default function App() {
   const alarmLoop = useRef<ReturnType<typeof setInterval> | null>(null);
   const alarmAudio = useRef<AudioContext | null>(null);
   const [ringingAlarm, setRingingAlarm] = useState<{ title: string; taskId?: string } | null>(null);
+  // Always-current task list for native listeners / async handlers (avoids stale closures overwriting saved tasks)
+  const tasksRef = useRef<SavedTask[]>(tasks);
+  tasksRef.current = tasks;
+  const isNative = Capacitor.isNativePlatform();
 
   // Load persistent tasks from Preferences on native / localStorage on web
   useEffect(() => {
@@ -158,8 +163,9 @@ export default function App() {
     };
   }, [session?.user.id]);
 
-  // Listen to native notifications and re-schedule web alarms
+  // Listen to native notifications and re-schedule web alarms (only once saved tasks are loaded)
   useEffect(() => {
+    if (!isLoaded) return;
     let receivedSub: { remove: () => Promise<void> } | undefined;
     let actionSub: { remove: () => Promise<void> } | undefined;
 
@@ -179,18 +185,23 @@ export default function App() {
           void handleAlarmDone(taskId);
         } else if (action.actionId === "SNOOZE") {
           void handleAlarmSnooze(taskId);
+        } else {
+          // Notification body tapped: open the in-app alarm so Done / Snooze are one tap away
+          ringAlarm(action.notification.body || action.notification.title, taskId);
         }
       }).then((sub) => {
         actionSub = sub;
       });
     }
 
-    // Schedule active alarms in memory
-    tasks.forEach((t) => {
-      if (t.reminderAt && !t.completed && new Date(t.reminderAt).getTime() > Date.now()) {
-        void scheduleReminder(t.id, t.title, new Date(t.reminderAt), false);
-      }
-    });
+    // Web: re-arm in-page timers for saved alarms (native alarms are re-synced by syncAlarmsOnLaunch)
+    if (!Capacitor.isNativePlatform()) {
+      tasksRef.current.forEach((t) => {
+        if (t.reminderAt && !t.completed && new Date(t.reminderAt).getTime() > Date.now()) {
+          void scheduleReminder(t.id, t.title, new Date(t.reminderAt), false);
+        }
+      });
+    }
 
     return () => {
       Object.values(webTimers.current).forEach(clearTimeout);
@@ -260,7 +271,7 @@ export default function App() {
       setTasks((current) =>
         current.map((t) => (t.id === taskId ? { ...t, completed: true } : t))
       );
-      const target = tasks.find((t) => t.id === taskId);
+      const target = tasksRef.current.find((t) => t.id === taskId);
       if (target) void persistTask({ ...target, completed: true });
       setNotice("Task marked done. Great momentum!");
     }
@@ -280,15 +291,17 @@ export default function App() {
         snoozeDate.getMinutes()
       ).padStart(2, "0")}`;
 
-      const updated = tasks.map((t) =>
-        t.id === taskId
-          ? { ...t, reminderTime: snoozeTime, reminderAt: snoozeDate.toISOString() }
-          : t
+      const original = tasksRef.current.find((t) => t.id === taskId);
+      setTasks((current) =>
+        current.map((t) =>
+          t.id === taskId
+            ? { ...t, reminderTime: snoozeTime, reminderAt: snoozeDate.toISOString() }
+            : t
+        )
       );
-      setTasks(updated);
 
-      const targetTask = updated.find((t) => t.id === taskId);
-      if (targetTask) {
+      if (original) {
+        const targetTask = { ...original, reminderTime: snoozeTime, reminderAt: snoozeDate.toISOString() };
         void persistTask(targetTask);
         void scheduleReminder(taskId, targetTask.title, snoozeDate, false);
       }
@@ -316,6 +329,7 @@ export default function App() {
 
     if (Capacitor.isNativePlatform()) {
       if (askPermission) {
+        setNotice(ALARM_PERMISSION_LINE);
         const { granted, explanation } = await requestAlarmPermissions();
         if (!granted) {
           setNotice(explanation || "Enable notifications in device settings for background alarms.");
@@ -558,7 +572,13 @@ export default function App() {
             className="hero-portrait"
             src="/goggins-hero.jpg"
             alt="David Goggins portrait with Stay Hard"
+            width={300}
+            height={300}
+            data-testid="hero-portrait"
           />
+          <p className="hero-quote" data-testid="hero-quote">
+            “Every step is evidence the story in your mind is not true.<br /> Forward. Forward.”
+          </p>
           <div className="float f1">
             <b>Small counts.</b>
             <small>Progress without pressure</small>
@@ -568,7 +588,7 @@ export default function App() {
             <small>That's the whole strategy</small>
           </div>
           <span className="art-note">A little progress, every day</span>
-          <div className="hero-badge">{remainingCount} left today</div>
+          <div className="hero-badge" data-testid="hero-badge">{remainingCount} left today</div>
         </div>
       </section>
 
@@ -706,6 +726,11 @@ export default function App() {
                       <small className="reminder-schedule-note">
                         Scheduled for {formatTime12(reminderTime)}{" "}
                         {new Date(reminderAt).getDate() !== new Date().getDate() ? "(tomorrow)" : "(today)"}
+                      </small>
+                    )}
+                    {!isNative && (
+                      <small className="reminder-web-note" data-testid="web-alarm-note">
+                        In the browser this rings while the tab is open. Real alarms need the Android app.
                       </small>
                     )}
                   </div>
