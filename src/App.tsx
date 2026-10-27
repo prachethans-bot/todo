@@ -4,6 +4,8 @@ import { ArrowRight, Check, CheckCircle2, Clock3, LogOut, ShieldCheck, Sparkles,
 import type { Session } from "@supabase/supabase-js";
 import { getDemoResponse, type AssistantResponse, type TaskMode } from "./lib/assistant";
 import Hero3D from "./components/Hero3D";
+import { Capacitor } from "@capacitor/core";
+import { LocalNotifications } from "@capacitor/local-notifications";
 import { hasSupabaseConfig, supabase } from "./lib/supabase";
 
 type SavedTask = {
@@ -47,6 +49,7 @@ export default function App() {
   const alarmAudio = useRef<AudioContext | null>(null);
   const [ringingAlarm, setRingingAlarm] = useState("");
   const previousStorageKey = useRef(storageKey());
+  const nativeAlarmIds = useRef<Record<string, number>>({});
 
   useEffect(() => {
     const nextKey = storageKey(session?.user.id);
