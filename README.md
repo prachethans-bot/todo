@@ -29,7 +29,7 @@ The local task flow works without Supabase configuration. Guest tasks and each s
 1. Create a Supabase project.
 2. In **SQL Editor**, run `supabase/migrations/001_create_tasks.sql`.
 3. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in local `.env.local`.
-4. Deploy the Edge Function named `todo-adhd-assistant` from `supabase/functions/todo-adhd-assistant/index.ts`.
+4. Deploy the Edge Function named `stepwise-assistant` from `supabase/functions/stepwise-assistant/index.ts`.
 5. Set the function secrets:
    - `OPENAI_API_KEY` — optional, for real AI output.
    - `OPENAI_MODEL` — optional; defaults to `gpt-4o-mini`.
@@ -43,7 +43,7 @@ supabase login
 supabase link --project-ref YOUR_PROJECT_REF
 supabase db push
 supabase secrets set OPENAI_API_KEY=YOUR_KEY
-supabase functions deploy todo-adhd-assistant
+supabase functions deploy stepwise-assistant
 ```
 
 If you do not want AI enabled yet, omit the OpenAI key and the authenticated function returns its built-in response. Never put an OpenAI key, service-role key, or other private secret in a `VITE_*` variable or commit it to GitHub.
