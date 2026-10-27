@@ -48,6 +48,10 @@ supabase functions deploy stepwise-assistant
 
 If you do not want AI enabled yet, omit the OpenAI key and the authenticated function returns its built-in response. Never put an OpenAI key, service-role key, or other private secret in a `VITE_*` variable or commit it to GitHub.
 
+## Install and offline basics
+
+The production build registers a small service worker and includes a web app manifest. Once opened online, the app shell and same-origin static assets can be cached for later visits. AI requests and Supabase authentication/cloud sync still require an internet connection. Browser reminder timers are not guaranteed while the browser is closed.
+
 ## Accessibility and motion
 
 - Keyboard focus styles and a skip link are included.
