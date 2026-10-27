@@ -33,7 +33,7 @@ export default function Hero3D() {
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(32, Math.max(root.clientWidth, 1) / Math.max(root.clientHeight, 1), 0.1, 100);
-    camera.position.set(0, -0.72, 9.4);
+    camera.position.set(0, -0.72, 10.9);
 
     const character = new THREE.Group();
     scene.add(character);
