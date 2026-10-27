@@ -277,7 +277,7 @@ export default function App() {
     setTasks((current) => current.map((t) => t.id === item.id ? updated : t));
     await persistTask(updated);
     setProofTask(null);
-    setNotice("Photo captured in memory only. Alarm stopped — now start your task. It is not marked done.");
+    setNotice("Gemini approved your starting setup. Alarm stopped — now start your task. It is not marked done.");
   }
 
   async function handleAlarmSnooze(taskId?: string) {
