@@ -34,7 +34,18 @@ export function TaskProofCamera({ taskTitle, onCancel, onConfirm }: Props) {
         await videoRef.current.play();
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not open the camera. Please allow camera permission.");
+      const cameraError = e as { name?: string; message?: string };
+      if (cameraError?.name === "NotAllowedError" || cameraError?.name === "PermissionDeniedError") {
+        setError("Camera permission is blocked. In Chrome, tap the site icon beside the address bar → Permissions → Camera → Allow, then tap Try camera again. If this is opened inside another app, open the website directly in Chrome.");
+      } else if (cameraError?.name === "NotFoundError" || cameraError?.name === "DevicesNotFoundError") {
+        setError("No camera was found on this device. Check your camera app and try again.");
+      } else if (cameraError?.name === "NotReadableError" || cameraError?.name === "TrackStartError") {
+        setError("Your camera may be in use by another app. Close other camera apps and tap Try camera again.");
+      } else if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+        setError("Camera needs a secure HTTPS page. Open the published website in Chrome, not a preview embedded inside another app.");
+      } else {
+        setError(cameraError?.message || "Could not open the camera. Check browser camera permissions and try again.");
+      }
     } finally {
       setOpening(false);
     }
@@ -119,8 +130,10 @@ export function TaskProofCamera({ taskTitle, onCancel, onConfirm }: Props) {
               <button type="button" className="outline" onClick={() => void openCamera()}><RefreshCw size={15} /> Retake</button>
               <button type="button" className="primary" onClick={() => void confirm()} disabled={verifying}><ShieldCheck size={15} /> {verifying ? "Checking photo…" : "Verify & start"}</button>
             </>
+          ) : error ? (
+            <button type="button" className="primary" disabled={opening} onClick={() => void openCamera()}><RefreshCw size={15} /> {opening ? "Opening camera…" : "Try camera again"}</button>
           ) : (
-            <button type="button" className="primary" disabled={opening || !!error} onClick={capture}><Camera size={15} /> Capture photo</button>
+            <button type="button" className="primary" disabled={opening} onClick={capture}><Camera size={15} /> Capture photo</button>
           )}
         </div>
         <p className="proof-privacy">Temporary Gemini check · not saved to your gallery or app database · task stays incomplete</p>
