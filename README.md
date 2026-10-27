@@ -1,106 +1,71 @@
-# Stepwise — ADHD-Friendly Task Assistant
+# Stepwise — ADHD-friendly task assistant
 
-A calm, low-pressure task assistant designed to help people begin overwhelming tasks with one tiny action at a time.
+Stepwise helps users begin overwhelming work with one tiny, concrete action at a time. It is designed to feel supportive, not demanding.
 
-## Product principles
+## Features in this repository
 
-- Break tasks into micro-steps that can usually be started in under 60 seconds.
-- Keep the tone supportive, practical, and non-judgmental.
-- Never use guilt, shame, or pressure as motivation.
-- Offer an optional reminder and invite the user to estimate how long a step will take.
-- Keep AI provider secrets on a server, never in browser code.
-
-## Current status
-
-This repository is an early React + TypeScript starter.
-
-- Responsive task workspace with four modes: `NEW_TASK`, `NEXT_STEP`, `TOO_HARD`, and `TIME_CHECK`.
-- Local demo response with a typed assistant-response contract.
-- Supabase email/password sign-up and sign-in wiring.
-- Supabase session persistence and sign-out.
-- Dark interface with muted green accents.
-- The hero illustration is currently a CSS placeholder. The requested 3D David Goggins-style hero animation is **not implemented yet**.
-- The task helper is a local demo; it does not call a real AI model yet.
-- Actual scheduled alarms, saved task history, and database tables/RLS policies are not implemented yet.
-
-## Tech stack
-
-- React
-- TypeScript
-- Vite
-- Supabase Auth
-- Lucide icons
+- Responsive dark interface with muted green accents.
+- Four modes: `NEW_TASK`, `NEXT_STEP`, `TOO_HARD`, and `TIME_CHECK`.
+- Structured micro-step response with a supportive encouragement and time-estimate prompt.
+- Saved task list stored in browser local storage, including completion and time feedback.
+- Optional in-page reminder and browser notification support. For reliable alerts, keep the tab open; browser timers are not a guaranteed background alarm system.
+- Supabase email/password authentication.
+- Optional Supabase cloud task sync protected by Row Level Security (RLS).
+- Supabase Edge Function for authenticated AI requests. If no OpenAI key is configured, it returns a safe built-in response.
+- SQL migration for the user-owned tasks table and RLS policies.
 
 ## Run locally
 
 1. Install Node.js LTS.
-2. Clone this repository and open it in VS Code.
-3. Install dependencies:
+2. Clone the repo and open it in VS Code.
+3. Install dependencies with `npm install`.
+4. Copy `.env.example` to `.env.local` and add your Supabase project URL and publishable/anon key.
+5. Run `npm run dev`.
 
-   ```bash
-   npm install
-   ```
+The app's local task flow works without Supabase configuration. Authentication, cloud sync and the Edge Function need your Supabase project.
 
-4. Copy `.env.example` to `.env.local`.
-5. To enable real authentication, create a Supabase project and fill in the Supabase URL and frontend publishable/anon key in `.env.local`.
-6. Start the development server:
+## Supabase setup
 
-   ```bash
-   npm run dev
-   ```
+1. Create a Supabase project.
+2. In **SQL Editor**, run `supabase/migrations/001_create_tasks.sql`.
+3. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in local `.env.local`.
+4. Deploy the Edge Function named `stepwise-assistant` from `supabase/functions/stepwise-assistant/index.ts`.
+5. Set the function secrets:
+   - `OPENAI_API_KEY` — optional, for real AI output.
+   - `OPENAI_MODEL` — optional; defaults to `gpt-4o-mini`.
+6. The function uses `SUPABASE_URL` and `SUPABASE_ANON_KEY` provided by the Supabase Edge Function environment. It validates the caller's session before processing.
+7. In Supabase Auth settings, configure the Site URL and allowed redirect URLs for your local and deployed app.
 
-7. Open the local URL shown in the terminal.
+Deploy with the Supabase CLI from the repository root:
 
-The task workspace demo can be explored without Supabase configuration. Authentication requires valid Supabase settings.
-
-## Environment variables
-
-```env
-VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_PUBLISHABLE_OR_ANON_KEY
+```bash
+supabase login
+supabase link --project-ref YOUR_PROJECT_REF
+supabase db push
+supabase secrets set OPENAI_API_KEY=YOUR_KEY
+supabase functions deploy stepwise-assistant
 ```
 
-Copy these example values into your local `.env.local` and replace them with your own project values. Never commit `.env.local` or real secrets.
+If you do not want AI enabled yet, omit the OpenAI key and the authenticated function returns its built-in response. Never put an OpenAI key, service-role key, or other private secret in a `VITE_*` variable or commit it to GitHub.
 
-**Never put a Supabase service-role key or private AI API key in a `VITE_*` variable.** Frontend variables are exposed to browser users. AI calls should go through a server-side endpoint or Supabase Edge Function, with provider keys stored as server-side secrets and the signed-in user validated.
+## Build
 
-## Assistant response contract
+```bash
+npm run build
+npm run preview
+``
 
-The current local demo uses this response shape:
+## Known limitations
 
-```ts
-type TaskMode = "NEW_TASK" | "NEXT_STEP" | "TOO_HARD" | "TIME_CHECK";
+- The requested 3D David Goggins hero animation is not included. The current hero is a CSS placeholder. Use a properly licensed asset and confirm permission before using a real person's likeness.
+- Browser notifications require permission, and JavaScript timers may not fire if the browser is closed or suspended. These are gentle reminders, not guaranteed scheduled alarms.
+- Cloud task sync requires the SQL migration and a correctly configured Supabase project.
+- The AI function requires deployment; real AI generation additionally requires an OpenAI API key stored as a server-side secret.
+- The app is an early-stage product and should receive a local build, accessibility, and security review before public launch.
 
-type AssistantResponse = {
-  mode: TaskMode;
-  optimized_task_title: string;
-  the_micro_step: string;
-  dopamine_hook: string;
-  alarm_settings: {
-    enabled: boolean;
-    at: string | null;
-    label: string;
-  };
-  time_guess_prompt: string;
-  time_feedback: string;
-};
-```
+## Security notes
 
-The AI implementation should return valid structured data matching this contract, validate responses, and preserve the app's supportive, low-pressure behavior.
-
-## Supabase security checklist
-
-- Enable the authentication methods the app needs in Supabase.
-- Set the correct Site URL and allowed redirect URLs in Supabase Auth settings.
-- Use Row Level Security (RLS) for user-owned database records.
-- Enforce authorization on the server/database; hiding a UI element is not access control.
-- Keep service-role and AI provider secrets out of frontend code and Git history.
-
-## Planned next steps
-
-1. Match the UI to the supplied Figma design.
-2. Add the approved/licensed 3D hero animation asset.
-3. Build a server-side AI endpoint with response-schema validation.
-4. Add task and time-estimate persistence with user-scoped RLS.
-5. Implement optional reminders with clear user consent and browser/device capability checks.
-6. Add tests, accessibility checks, and deployment configuration.
+- Frontend Supabase keys are public by design; protect data with RLS.
+- Never expose service-role or AI provider keys in frontend code.
+- The Edge Function validates the caller with Supabase Auth before accepting a task.
+- Tasks may contain personal information. Avoid entering sensitive data and review privacy and retention practices before launch.
