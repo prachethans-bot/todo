@@ -24,7 +24,7 @@ export function TaskProofCamera({ taskTitle, onCancel, onConfirm }: Props) {
       }
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
-        video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 960 } }
+        video: { facingMode: { ideal: "user" }, width: { ideal: 1280 }, height: { ideal: 960 } }
       });
       streamRef.current = stream;
       if (videoRef.current) {
