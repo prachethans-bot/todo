@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, Check, RefreshCw, X, ShieldCheck } from "lucide-react";
+import { Camera, FileText, RefreshCw, X, ShieldCheck } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
 type Props = {
@@ -15,6 +15,9 @@ export function TaskProofCamera({ taskTitle, onCancel, onConfirm }: Props) {
   const [error, setError] = useState("");
   const [opening, setOpening] = useState(true);
   const [verifying, setVerifying] = useState(false);
+  const [method, setMethod] = useState<"photo" | "essay">("photo");
+  const [essay, setEssay] = useState("");
+  const essayWords = essay.trim() ? essay.trim().split(/\s+/).length : 0;
 
   async function openCamera() {
     setError("");
@@ -82,7 +85,12 @@ export function TaskProofCamera({ taskTitle, onCancel, onConfirm }: Props) {
   }
 
   async function confirm() {
-    if (!snapshot || verifying) return;
+    if (verifying) return;
+    if (method === "photo" && !snapshot) return;
+    if (method === "essay" && (!essay.trim() || essayWords > 150)) {
+      setError(essayWords > 150 ? "Keep your explanation within 150 words." : "Write a short explanation of how you will begin this task.");
+      return;
+    }
     if (!supabase) {
       setError("Sign in and connect Supabase before using AI verification.");
       return;
@@ -90,8 +98,6 @@ export function TaskProofCamera({ taskTitle, onCancel, onConfirm }: Props) {
     setVerifying(true);
     setError("");
     try {
-      // Pass the signed-in user's access token explicitly. The Edge Function
-      // requires a real user JWT, not just the project's publishable API key.
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
       const accessToken = sessionData.session?.access_token;
@@ -100,13 +106,16 @@ export function TaskProofCamera({ taskTitle, onCancel, onConfirm }: Props) {
         return;
       }
 
+      const body = method === "photo"
+        ? { taskTitle, imageData: snapshot }
+        : { taskTitle, essayText: essay.trim() };
       const { data, error: verifyError } = await supabase.functions.invoke("verify-task-start", {
-        body: { taskTitle, imageData: snapshot },
+        body,
         headers: { Authorization: `Bearer ${accessToken}` }
       });
       if (verifyError) throw verifyError;
       if (data?.approved !== true) {
-        setError(typeof data?.reason === "string" ? data.reason : "The photo did not show a clear starting setup. Retake it and try again.");
+        setError(typeof data?.reason === "string" ? data.reason : "That proof does not clearly match this task. Please try again.");
         return;
       }
       stopCamera();
@@ -133,9 +142,51 @@ export function TaskProofCamera({ taskTitle, onCancel, onConfirm }: Props) {
         <h3>Show yourself starting</h3>
         <p className="proof-task">{taskTitle}</p>
         <p className="proof-description">Take a quick photo of your workspace as you get ready to begin. The photo is sent to Gemini for a temporary AI check, but is not saved to your gallery or your app database.</p>
-        <div className="proof-preview">
-          {snapshot ? <img src={snapshot} alt="Temporary task-start photo preview" /> : <video ref={videoRef} autoPlay muted playsInline />}
-          {opening && !snapshot && <span className="proof-camera-status">Opening camera…</span>}
+        {method === "photo" ? (
+          <>
+            <div className="proof-preview">
+              {snapshot ? <img src={snapshot} alt="Temporary task-start photo preview" /> : <video ref={videoRef} autoPlay muted playsInline />}
+              {opening && !snapshot && <span className="proof-camera-status">Opening camera…</span>}
+            </div>
+            <div className="plan-controls proof-controls">
+              {snapshot ? (
+                <>
+                  <button type="button" className="outline" onClick={() => void openCamera()}><RefreshCw size={15} /> Retake</button>
+                  <button type="button" className="primary" onClick={() => void confirm()} disabled={verifying}><ShieldCheck size={15} /> {verifying ? "Checking…" : "Verify & start"}</button>
+                </>
+              ) : error ? (
+                <button type="button" className="primary" disabled={opening} onClick={() => void openCamera()}><RefreshCw size={15} /> {opening ? "Opening camera…" : "Try camera again"}</button>
+              ) : (
+                <button type="button" className="primary" disabled={opening} onClick={capture}><Camera size={15} /> Capture photo</button>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="proof-essay">
+            <label htmlFor="task-start-essay">DESCRIBE HOW YOU WILL START THIS TASK</label>
+            <textarea
+              id="task-start-essay"
+              value={essay}
+              onChange={(event) => setEssay(event.target.value)}
+              placeholder={`Explain the first steps you will take for “${taskTitle}”…`}
+              rows={5}
+              maxLength={3000}
+              aria-describedby="essay-word-count"
+            />
+            <div className={`proof-word-count ${essayWords > 150 ? "over-limit" : ""}`} id="essay-word-count">{essayWords}/150 words</div>
+            <p className="proof-description">Gemini checks whether your explanation genuinely relates to this scheduled task. Unrelated or vague answers will be rejected.</p>
+            <div className="plan-controls proof-controls">
+              <button type="button" className="primary" onClick={() => void confirm()} disabled={verifying || !essay.trim() || essayWords > 150}>
+                <ShieldCheck size={15} /> {verifying ? "Checking explanation…" : "Verify & start"}
+              </button>
+            </div>
+          </div>
+        )}
+        <div className="proof-method-switch">
+          <span>{method === "photo" ? "Can't take a photo right now?" : "Prefer to use your camera?"}</span>
+          <button type="button" className="outline" onClick={() => { setMethod(method === "photo" ? "essay" : "photo"); setError(""); }}>
+            {method === "photo" ? <><FileText size={15} /> Write an explanation</> : <><Camera size={15} /> Use camera</>}
+          </button>
         </div>
         {error && <p className="proof-error" role="alert">{error}</p>}
         <div className="plan-controls proof-controls">
@@ -150,7 +201,7 @@ export function TaskProofCamera({ taskTitle, onCancel, onConfirm }: Props) {
             <button type="button" className="primary" disabled={opening} onClick={capture}><Camera size={15} /> Capture photo</button>
           )}
         </div>
-        <p className="proof-privacy">Temporary Gemini check · not saved to your gallery or app database · task stays incomplete</p>
+        <p className="proof-privacy">Temporary Gemini check · your proof is not saved to your app database · task stays incomplete until approved</p>
       </div>
     </div>
   );
