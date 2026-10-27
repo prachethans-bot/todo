@@ -1,12 +1,19 @@
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 
+/**
+ * Procedural, articulated 3D athlete hero.
+ * The rig is a lightweight hierarchy of pivots so it works without downloading
+ * a large GLB file. It is a stylized David Goggins-inspired character, not a
+ * photorealistic scan or an exact likeness.
+ */
 export default function Hero3D() {
   const host = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const root = host.current;
     if (!root) return;
+
     let frame = 0;
     let renderer: THREE.WebGLRenderer;
     try {
@@ -15,19 +22,21 @@ export default function Hero3D() {
       root.classList.add("hero3d-fallback");
       return;
     }
+
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.setSize(root.clientWidth, root.clientHeight);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.setClearColor(0x000000, 0);
     root.appendChild(renderer.domElement);
-    renderer.domElement.setAttribute("aria-label", "Animated 3D athlete character");
+    renderer.domElement.setAttribute("aria-label", "Rigged animated 3D athlete character");
     renderer.domElement.setAttribute("role", "img");
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(32, root.clientWidth / root.clientHeight, 0.1, 100);
-    camera.position.set(0, 1.15, 7.8);
-    const group = new THREE.Group();
-    scene.add(group);
+    const camera = new THREE.PerspectiveCamera(32, Math.max(root.clientWidth, 1) / Math.max(root.clientHeight, 1), 0.1, 100);
+    camera.position.set(0, 1.0, 8.2);
+
+    const character = new THREE.Group();
+    scene.add(character);
 
     scene.add(new THREE.HemisphereLight(0xd9f6d0, 0x111711, 2.2));
     const key = new THREE.DirectionalLight(0xe5ffd8, 3.2);
@@ -45,56 +54,85 @@ export default function Hero3D() {
     const beard = new THREE.MeshStandardMaterial({ color: 0x241b15, roughness: 1 });
     const lip = new THREE.MeshStandardMaterial({ color: 0x503126, roughness: 0.85 });
     const eyeMat = new THREE.MeshStandardMaterial({ color: 0x090b08, roughness: 0.3 });
-    const add = (geo: THREE.BufferGeometry, mat: THREE.Material, pos: [number, number, number], scale?: [number, number, number]) => {
+
+    const add = (
+      parent: THREE.Object3D,
+      geo: THREE.BufferGeometry,
+      mat: THREE.Material,
+      pos: [number, number, number],
+      scale?: [number, number, number]
+    ) => {
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(...pos);
       if (scale) mesh.scale.set(...scale);
-      group.add(mesh);
+      parent.add(mesh);
       return mesh;
     };
-    // Broad shoulders and torso
-    add(new THREE.CapsuleGeometry(0.78, 1.18, 6, 14), shirt, [0, -1.2, 0], [1.05, 1.0, 0.63]);
-    add(new THREE.SphereGeometry(0.48, 24, 18), shirt, [-0.72, -0.62, 0], [1.0, 0.82, 0.78]);
-    add(new THREE.SphereGeometry(0.48, 24, 18), shirt, [0.72, -0.62, 0], [1.0, 0.82, 0.78]);
-    // Neck and head
-    add(new THREE.CylinderGeometry(0.23, 0.31, 0.55, 20), skin, [0, 0.05, 0]);
-    add(new THREE.SphereGeometry(0.58, 40, 32), skin, [0, 0.83, 0.02], [0.82, 1.0, 0.78]);
-    // Sculpted jaw and short beard shading give the face a more lifelike silhouette.
-    add(new THREE.SphereGeometry(0.43, 32, 22), beard, [0, 0.53, 0.27], [0.84, 0.56, 0.67]);
-    add(new THREE.SphereGeometry(0.37, 32, 22), skinLight, [0, 0.62, 0.43], [0.88, 0.52, 0.43]);
-    add(new THREE.SphereGeometry(0.16, 20, 14), skinLight, [-0.47, 0.8, 0.0], [0.65, 0.85, 0.6]);
-    add(new THREE.SphereGeometry(0.16, 20, 14), skinLight, [0.47, 0.8, 0.0], [0.65, 0.85, 0.6]);
-    // Ear folds, cheek planes, and a modeled nose bridge.
-    add(new THREE.TorusGeometry(0.085, 0.025, 8, 16), skinLight, [-0.49, 0.8, 0.11], [0.75, 1.2, 0.8]).rotation.y = Math.PI / 2;
-    add(new THREE.TorusGeometry(0.085, 0.025, 8, 16), skinLight, [0.49, 0.8, 0.11], [0.75, 1.2, 0.8]).rotation.y = Math.PI / 2;
-    add(new THREE.SphereGeometry(0.19, 20, 16), skinLight, [-0.31, 0.62, 0.38], [1, 0.65, 0.45]);
-    add(new THREE.SphereGeometry(0.19, 20, 16), skinLight, [0.31, 0.62, 0.38], [1, 0.65, 0.45]);
-    // Brow ridge, eyes, nose and mouth add readable facial structure
-    add(new THREE.BoxGeometry(0.27, 0.075, 0.08), dark, [-0.2, 0.91, 0.58], [1, 1, 1]);
-    add(new THREE.BoxGeometry(0.27, 0.075, 0.08), dark, [0.2, 0.91, 0.58], [1, 1, 1]);
-    add(new THREE.SphereGeometry(0.047, 12, 10), eyeMat, [-0.19, 0.83, 0.63]);
-    add(new THREE.SphereGeometry(0.047, 12, 10), eyeMat, [0.19, 0.83, 0.63]);
-    const nose = add(new THREE.ConeGeometry(0.105, 0.29, 16), skinLight, [0, 0.67, 0.66], [0.8, 1, 0.85]);
+
+    // Torso and broad shoulders.
+    const torso = new THREE.Group();
+    torso.position.y = -0.1;
+    character.add(torso);
+    add(torso, new THREE.CapsuleGeometry(0.78, 1.18, 6, 18), shirt, [0, -1.1, 0], [1.05, 1.0, 0.63]);
+    add(torso, new THREE.SphereGeometry(0.48, 28, 20), shirt, [-0.72, -0.52, 0], [1.0, 0.82, 0.78]);
+    add(torso, new THREE.SphereGeometry(0.48, 28, 20), shirt, [0.72, -0.52, 0], [1.0, 0.82, 0.78]);
+    add(torso, new THREE.BoxGeometry(0.65, 0.045, 0.035), trim, [0, -0.9, 0.62]);
+
+    // Head pivot: separate from torso so the neck/head can turn naturally.
+    const head = new THREE.Group();
+    head.position.set(0, 0.1, 0);
+    character.add(head);
+    add(head, new THREE.CylinderGeometry(0.23, 0.31, 0.55, 20), skin, [0, -0.05, 0]);
+    add(head, new THREE.SphereGeometry(0.58, 48, 36), skin, [0, 0.73, 0.02], [0.82, 1.0, 0.78]);
+    // Bald scalp, strong jaw and close-cropped beard shading.
+    add(head, new THREE.SphereGeometry(0.44, 40, 28), beard, [0, 0.43, 0.27], [0.84, 0.56, 0.67]);
+    add(head, new THREE.SphereGeometry(0.37, 36, 26), skinLight, [0, 0.52, 0.43], [0.88, 0.52, 0.43]);
+    add(head, new THREE.SphereGeometry(0.16, 24, 18), skinLight, [-0.47, 0.70, 0], [0.65, 0.85, 0.6]);
+    add(head, new THREE.SphereGeometry(0.16, 24, 18), skinLight, [0.47, 0.70, 0], [0.65, 0.85, 0.6]);
+    add(head, new THREE.TorusGeometry(0.085, 0.025, 8, 18), skinLight, [-0.49, 0.70, 0.11], [0.75, 1.2, 0.8]).rotation.y = Math.PI / 2;
+    add(head, new THREE.TorusGeometry(0.085, 0.025, 8, 18), skinLight, [0.49, 0.70, 0.11], [0.75, 1.2, 0.8]).rotation.y = Math.PI / 2;
+    add(head, new THREE.SphereGeometry(0.19, 24, 18), skinLight, [-0.31, 0.52, 0.38], [1, 0.65, 0.45]);
+    add(head, new THREE.SphereGeometry(0.19, 24, 18), skinLight, [0.31, 0.52, 0.38], [1, 0.65, 0.45]);
+    add(head, new THREE.BoxGeometry(0.27, 0.075, 0.08), dark, [-0.2, 0.81, 0.58]);
+    add(head, new THREE.BoxGeometry(0.27, 0.075, 0.08), dark, [0.2, 0.81, 0.58]);
+    add(head, new THREE.SphereGeometry(0.047, 16, 12), eyeMat, [-0.19, 0.73, 0.63]);
+    add(head, new THREE.SphereGeometry(0.047, 16, 12), eyeMat, [0.19, 0.73, 0.63]);
+    const nose = add(head, new THREE.ConeGeometry(0.105, 0.29, 18), skinLight, [0, 0.57, 0.66], [0.8, 1, 0.85]);
     nose.rotation.z = Math.PI;
-    add(new THREE.SphereGeometry(0.06, 12, 10), skinLight, [-0.065, 0.56, 0.68], [1, 0.65, 0.8]);
-    add(new THREE.SphereGeometry(0.06, 12, 10), skinLight, [0.065, 0.56, 0.68], [1, 0.65, 0.8]);
-    add(new THREE.BoxGeometry(0.23, 0.025, 0.035), lip, [0, 0.48, 0.69]);
-    add(new THREE.BoxGeometry(0.18, 0.018, 0.025), skinLight, [0, 0.445, 0.69]);
-    // Arms: slightly angled down to give the character a strong stance
-    const leftArm = add(new THREE.CapsuleGeometry(0.19, 0.86, 5, 12), skin, [-0.96, -1.18, 0.02]);
-    leftArm.rotation.z = -0.15;
-    const rightArm = add(new THREE.CapsuleGeometry(0.19, 0.86, 5, 12), skin, [0.96, -1.18, 0.02]);
-    rightArm.rotation.z = 0.15;
-    add(new THREE.BoxGeometry(0.65, 0.045, 0.035), trim, [0, -1.0, 0.62]);
-    // Simple ground shadow
-    const shadow = new THREE.Mesh(new THREE.CircleGeometry(1.45, 40), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28 }));
+    add(head, new THREE.SphereGeometry(0.06, 16, 12), skinLight, [-0.065, 0.46, 0.68], [1, 0.65, 0.8]);
+    add(head, new THREE.SphereGeometry(0.06, 16, 12), skinLight, [0.065, 0.46, 0.68], [1, 0.65, 0.8]);
+    add(head, new THREE.BoxGeometry(0.23, 0.025, 0.035), lip, [0, 0.38, 0.69]);
+    add(head, new THREE.BoxGeometry(0.18, 0.018, 0.025), skinLight, [0, 0.345, 0.69]);
+
+    // Shoulder/elbow pivots form a simple reusable arm rig.
+    const makeArm = (side: -1 | 1) => {
+      const shoulder = new THREE.Group();
+      shoulder.position.set(side * 0.76, -0.56, 0.02);
+      torso.add(shoulder);
+      add(shoulder, new THREE.SphereGeometry(0.29, 24, 18), skin, [0, -0.05, 0], [1, 1.0, 0.95]);
+      add(shoulder, new THREE.CapsuleGeometry(0.205, 0.54, 6, 14), skin, [side * 0.035, -0.42, 0], [1, 1.0, 1]);
+      const elbow = new THREE.Group();
+      elbow.position.set(side * 0.045, -0.72, 0);
+      shoulder.add(elbow);
+      add(elbow, new THREE.SphereGeometry(0.18, 20, 16), skin, [0, 0, 0], [1, 0.9, 0.95]);
+      add(elbow, new THREE.CapsuleGeometry(0.16, 0.48, 6, 14), skin, [side * 0.025, -0.34, 0], [1, 1, 1]);
+      add(elbow, new THREE.SphereGeometry(0.17, 20, 16), skin, [side * 0.04, -0.68, 0.02], [1, 0.9, 0.75]);
+      return { shoulder, elbow };
+    };
+    const leftArm = makeArm(-1);
+    const rightArm = makeArm(1);
+
+    // Subtle green-lit ground shadow.
+    const shadow = new THREE.Mesh(
+      new THREE.CircleGeometry(1.45, 40),
+      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28 })
+    );
     shadow.rotation.x = -Math.PI / 2;
     shadow.position.set(0, -2.25, 0);
     shadow.scale.set(1.1, 0.38, 1);
     scene.add(shadow);
 
     const resize = () => {
-      if (!root) return;
       const width = Math.max(root.clientWidth, 1);
       const height = Math.max(root.clientHeight, 1);
       renderer.setSize(width, height);
@@ -104,17 +142,25 @@ export default function Hero3D() {
     const observer = new ResizeObserver(resize);
     observer.observe(root);
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
     const animate = () => {
       frame = requestAnimationFrame(animate);
       const t = performance.now() * 0.001;
       if (!reduced) {
-        group.rotation.y = Math.sin(t * 0.55) * 0.14;
-        group.position.y = Math.sin(t * 1.25) * 0.045;
-        group.rotation.x = Math.sin(t * 0.7) * 0.018;
+        character.rotation.y = Math.sin(t * 0.48) * 0.12;
+        character.position.y = Math.sin(t * 1.15) * 0.035;
+        torso.scale.y = 1 + Math.sin(t * 1.7) * 0.008;
+        head.rotation.y = Math.sin(t * 0.62) * 0.055;
+        head.rotation.x = Math.sin(t * 0.85) * 0.025;
+        leftArm.shoulder.rotation.z = -0.08 + Math.sin(t * 1.1) * 0.07;
+        rightArm.shoulder.rotation.z = 0.08 - Math.sin(t * 1.1) * 0.07;
+        leftArm.elbow.rotation.z = -0.05 + Math.max(0, Math.sin(t * 0.9)) * 0.12;
+        rightArm.elbow.rotation.z = 0.05 - Math.max(0, Math.sin(t * 0.9 + 1)) * 0.12;
       }
       renderer.render(scene, camera);
     };
     animate();
+
     return () => {
       cancelAnimationFrame(frame);
       observer.disconnect();
@@ -122,7 +168,7 @@ export default function Hero3D() {
         if (obj instanceof THREE.Mesh) {
           obj.geometry.dispose();
           const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
-          materials.forEach((m) => m.dispose());
+          materials.forEach((material) => material.dispose());
         }
       });
       renderer.dispose();
@@ -130,5 +176,5 @@ export default function Hero3D() {
     };
   }, []);
 
-  return <div className="hero3d" ref={host} aria-label="Animated 3D motivational athlete" />;
+  return <div className="hero3d" ref={host} aria-label="Rigged animated 3D motivational athlete" />;
 }
