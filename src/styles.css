@@ -1484,3 +1484,44 @@ footer b {
 .skip-link:focus {
   top: 8px;
 }
+
+
+/* Timed focus plan */
+.timed-plan { padding: 24px 0 34px; border-bottom: 1px solid var(--line, #2a2d2a); }
+.timed-plan-card { max-width: 820px; margin: 0 auto; padding: 24px; border: 1px solid var(--line, #2a2d2a); border-radius: 18px; background: var(--panel, #141614); }
+.timed-plan-card > label { display:block; margin: 14px 0 8px; font-size: 10px; letter-spacing: .12em; color: var(--muted); font-weight: 700; }
+.timed-plan-card textarea { width:100%; resize:vertical; border:1px solid var(--line, #333); border-radius:10px; padding:12px; background:#0d0f0d; color:inherit; font:inherit; }
+.plan-duration-row { display:flex; align-items:center; gap:14px; margin: 10px 0 18px; }
+.plan-duration-row input { flex:1; accent-color:var(--green, #a7ef79); }
+.plan-duration-row b { min-width:70px; text-align:right; font-size:13px; }
+.plan-progress-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin:26px 0 14px; }
+.plan-progress-head h3 { margin:5px 0; font-size:18px; overflow-wrap:anywhere; }
+.plan-progress-head > span { color:var(--muted); font-size:12px; white-space:nowrap; }
+.plan-countdown { display:grid; grid-template-columns:1fr auto; gap:5px 14px; padding:16px; margin:14px 0; border:1px solid #526746; border-radius:12px; background:#172016; }
+.plan-countdown span { font-size:10px; color:var(--muted); align-self:center; }
+.plan-countdown strong { font-size:26px; font-variant-numeric:tabular-nums; }
+.plan-countdown small { grid-column:1/-1; color:var(--muted); font-size:10px; }
+.plan-steps { display:grid; gap:8px; margin:16px 0; }
+.plan-step { display:flex; align-items:center; gap:12px; padding:12px; border:1px solid var(--line, #2a2d2a); border-radius:12px; min-width:0; }
+.plan-step.active { border-color:var(--green, #a7ef79); background:#151d13; }
+.plan-step.passed { opacity:.62; }
+.plan-step-number { font-size:12px; color:var(--muted); font-variant-numeric:tabular-nums; }
+.plan-step-copy { flex:1; min-width:0; }
+.plan-step-copy b { display:block; font-size:12px; line-height:1.5; overflow-wrap:anywhere; }
+.plan-step-copy small { display:block; margin-top:4px; font-size:9px; color:var(--muted); letter-spacing:.1em; }
+.plan-minutes { display:flex; align-items:center; gap:5px; color:var(--muted); font-size:10px; }
+.plan-minutes input { width:54px; padding:7px 4px; color:inherit; background:#0d0f0d; border:1px solid var(--line, #333); border-radius:7px; text-align:center; }
+.plan-controls { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; }
+.plan-controls button { display:inline-flex; align-items:center; justify-content:center; gap:7px; }
+.plan-controls button:disabled { opacity:.4; cursor:not-allowed; }
+.timed-plan-card .notice { display:flex; align-items:flex-start; gap:8px; }
+.plan-footnote { display:flex; align-items:flex-start; gap:7px; margin-top:16px; line-height:1.6; color:var(--muted); font-size:10px; }
+@media (max-width:600px) {
+ .timed-plan { padding: 18px 0 24px; }
+ .timed-plan-card { padding:15px; border-radius:14px; }
+ .plan-step { gap:8px; padding:9px 7px; }
+ .plan-step-copy b { font-size:11px; }
+ .plan-minutes input { width:45px; }
+ .plan-controls button { flex:1 1 42%; font-size:11px; }
+ .plan-countdown strong { font-size:22px; }
+}
