@@ -50,6 +50,7 @@ export default function App() {
   const [ringingAlarm, setRingingAlarm] = useState("");
   const previousStorageKey = useRef(storageKey());
   const nativeAlarmIds = useRef<Record<string, number>>({});
+  const nativeAlarmIds = useRef<Record<string, number>>({});
 
   useEffect(() => {
     const nextKey = storageKey(session?.user.id);
@@ -84,8 +85,21 @@ export default function App() {
     return () => { cancelled = true; };
   }, [session?.user.id]);
   useEffect(() => {
-    tasks.forEach(t => { if (t.reminderAt && !t.completed && new Date(t.reminderAt).getTime() > Date.now()) scheduleReminder(t.id, t.title, t.reminderAt, false); });
-    return () => Object.values(timers.current).forEach(clearTimeout);
+    let listener: { remove: () => Promise<void> } | undefined;
+    if (Capacitor.isNativePlatform()) {
+      void LocalNotifications.addListener("localNotificationReceived", notification => {
+        if (notification.body) ringAlarm(notification.body);
+      }).then(value => { listener = value; });
+    }
+    tasks.forEach(t => {
+      if (t.reminderAt && !t.completed && new Date(t.reminderAt).getTime() > Date.now()) {
+        scheduleReminder(t.id, t.title, t.reminderAt, false);
+      }
+    });
+    return () => {
+      Object.values(timers.current).forEach(clearTimeout);
+      if (listener) void listener.remove();
+    };
   // Reminders are rehydrated when the saved task list is first loaded.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -123,15 +137,50 @@ export default function App() {
     alarmLoop.current = setInterval(beep, 1400);
     if ("vibrate" in navigator) navigator.vibrate?.([250, 120, 250]);
   }
+  function notificationId(id: string) {
+    if (!nativeAlarmIds.current[id]) {
+      let hash = 0;
+      for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+      nativeAlarmIds.current[id] = (hash % 2_000_000_000) + 1;
+    }
+    return nativeAlarmIds.current[id];
+  }
+  async function cancelReminder(id: string) {
+    if (timers.current[id]) clearTimeout(timers.current[id]);
+    delete timers.current[id];
+    if (Capacitor.isNativePlatform()) {
+      try { await LocalNotifications.cancel({ notifications: [{ id: notificationId(id) }] }); } catch { /* already cancelled */ }
+    }
+  }
   function scheduleReminder(id: string, title: string, at: string, askPermission = true) {
     if (timers.current[id]) clearTimeout(timers.current[id]);
     const delay = new Date(at).getTime() - Date.now();
     if (!Number.isFinite(delay) || delay <= 0) { setNotice("Choose a reminder time in the future."); return; }
+    if (Capacitor.isNativePlatform()) {
+      void (async () => {
+        let permission = await LocalNotifications.checkPermissions();
+        if (permission.display !== "granted" && askPermission) permission = await LocalNotifications.requestPermissions();
+        if (permission.display !== "granted") {
+          setNotice("Enable notifications for Todo for ADHD in device settings to schedule background reminders.");
+          return;
+        }
+        await LocalNotifications.schedule({ notifications: [{
+          id: notificationId(id),
+          title: "Todo for ADHD · gentle reminder",
+          body: title,
+          schedule: { at: new Date(at), allowWhileIdle: true },
+          sound: "default",
+          extra: { taskId: id }
+        }] });
+        setNotice("Reminder scheduled with your device's notification system.");
+      })().catch(() => setNotice("Could not schedule the device notification. Check notification permission in Settings."));
+      return;
+    }
     if (delay > 2_147_000_000) { setNotice("That reminder is too far away for a browser timer. Choose a nearer time."); return; }
     const start = () => {
       timers.current[id] = setTimeout(() => {
-        setNotice("Gentle reminder: " + title);
-        if ("Notification" in window && Notification.permission === "granted") new Notification("A tiny step is waiting", { body: title });
+        ringAlarm(title);
+        setNotice("Your reminder is ringing. Dismiss it when you are ready.");
         setTasks(current => current.map(t => t.id === id ? { ...t, reminderAt: null } : t));
       }, delay);
       setNotice("Reminder set. Keep this tab open for the most reliable reminder.");
@@ -139,7 +188,10 @@ export default function App() {
     if (!("Notification" in window)) { start(); return; }
     if (Notification.permission === "granted") { start(); return; }
     if (!askPermission) { start(); return; }
-    Notification.requestPermission().then(permission => { if (permission === "granted") start(); else { start(); setNotice("In-page reminder set. Allow notifications in your browser for a desktop alert."); } });
+    Notification.requestPermission().then(permission => {
+      if (permission === "granted") start();
+      else { start(); setNotice("In-page reminder set. Allow notifications for a desktop alert."); }
+    });
   }
   async function handleAuth(e: FormEvent) {
     e.preventDefault(); setAuthMessage("");
@@ -183,12 +235,12 @@ export default function App() {
   async function toggleDone(item: SavedTask) {
     const updated = { ...item, completed: !item.completed, reminderAt: item.completed ? item.reminderAt : null };
     setTasks(current => current.map(t => t.id === item.id ? updated : t));
-    if (timers.current[item.id]) clearTimeout(timers.current[item.id]);
+    void cancelReminder(item.id);
     await persistTask(updated);
   }
   async function deleteTask(id: string) {
     setTasks(current => current.filter(t => t.id !== id));
-    if (timers.current[id]) clearTimeout(timers.current[id]);
+    void cancelReminder(id);
     if (session && supabase) {
       const { error } = await supabase.from("tasks").delete().eq("id", id);
       if (error) setNotice("Removed locally; cloud deletion needs setup.");
