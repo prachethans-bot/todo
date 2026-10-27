@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { Bell, Check, ChevronDown, Clock3, Pause, Play, RotateCcw, SkipForward, Square } from "lucide-react";
@@ -55,8 +55,7 @@ export function TimedPlanBuilder() {
   const isNative = Capacitor.isNativePlatform();
 
   const elapsed = status === "running" && startedAt ? Math.max(0, now - startedAt - pausedMs) : pausedMs;
-  const cumulative = useMemo(() => steps.reduce((sum, s, i) => sum + (i < current ? s.minutes * 60000 : 0), 0), [steps, current]);
-  const remainingMs = Math.max(0, (steps[current]?.minutes ?? 0) * 60000 - Math.max(0, elapsed - cumulative));
+  const remainingMs = Math.max(0, (steps[current]?.minutes ?? 0) * 60000 - (status === "running" ? Math.max(0, now - (startedAt ?? now)) : pausedMs));
   const remainingTotal = steps.reduce((sum, s, i) => sum + (i >= current ? s.minutes : 0), 0);
 
   useEffect(() => {
