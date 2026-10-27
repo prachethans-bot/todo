@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Camera, Check, RefreshCw, X, ShieldCheck } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { Capacitor } from "@capacitor/core";
-import { Camera, CameraDirection, CameraResultType, CameraSource } from "@capacitor/camera";
+import { Camera as NativeCamera, CameraDirection, CameraResultType, CameraSource } from "@capacitor/camera";
 
 type Props = {
   taskTitle: string;
@@ -73,7 +73,7 @@ export function TaskProofCamera({ taskTitle, onCancel, onConfirm }: Props) {
       setError("");
       setOpening(true);
       try {
-        const photo = await Camera.getPhoto({
+        const photo = await NativeCamera.getPhoto({
           quality: 78,
           allowEditing: false,
           resultType: CameraResultType.DataUrl,
