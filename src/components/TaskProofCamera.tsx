@@ -119,8 +119,19 @@ export function TaskProofCamera({ taskTitle, onCancel, onConfirm }: Props) {
     setVerifying(true);
     setError("");
     try {
+      // Pass the signed-in user's access token explicitly. The Edge Function
+      // requires a real user JWT, not just the project's publishable API key.
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setError("Your sign-in session is missing. Sign out and sign in again, then retry verification.");
+        return;
+      }
+
       const { data, error: verifyError } = await supabase.functions.invoke("verify-task-start", {
-        body: { taskTitle, imageData: snapshot }
+        body: { taskTitle, imageData: snapshot },
+        headers: { Authorization: `Bearer ${accessToken}` }
       });
       if (verifyError) throw verifyError;
       if (data?.approved !== true) {
@@ -130,8 +141,11 @@ export function TaskProofCamera({ taskTitle, onCancel, onConfirm }: Props) {
       stopCamera();
       setSnapshot(null);
       onConfirm();
-    } catch {
-      setError("AI verification is unavailable. Your alarm is still on. Please try again.");
+    } catch (e) {
+      const status = (e as { context?: { status?: number } })?.context?.status;
+      setError(status === 401
+        ? "Your sign-in session was rejected. Sign out and sign in again, then retry."
+        : "AI verification is unavailable. Your alarm is still on. Please try again.");
     } finally {
       setVerifying(false);
     }
