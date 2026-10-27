@@ -4,6 +4,7 @@ import { ArrowRight, Check, CheckCircle2, Clock3, LogOut, ShieldCheck, Sparkles,
 import type { Session } from "@supabase/supabase-js";
 import { getDemoResponse, type AssistantResponse, type TaskMode } from "./lib/assistant";
 import { hasSupabaseConfig, supabase } from "./lib/supabase";
+import "./hero-motion.css";
 
 type SavedTask = {
   id: string; title: string; mode: TaskMode; microStep: string; createdAt: string;
