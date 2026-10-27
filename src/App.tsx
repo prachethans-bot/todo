@@ -24,13 +24,6 @@ import { ClockPicker } from "./components/ClockPicker";
 import { CountdownRing } from "./components/CountdownRing";
 import { TimedPlanBuilder } from "./components/TimedPlanBuilder";
 
-const modes: { id: TaskMode; label: string }[] = [
-  { id: "NEW_TASK", label: "New task" },
-  { id: "NEXT_STEP", label: "Next step" },
-  { id: "TOO_HARD", label: "This feels hard" },
-  { id: "TIME_CHECK", label: "Check my time" }
-];
-
 function formatTime12(time24: string): string {
   const [hStr, mStr] = time24.split(":");
   let h = parseInt(hStr, 10);
@@ -393,11 +386,11 @@ export default function App() {
       let result: AssistantResponse | null = null;
       if (supabase && session) {
         const { data, error } = await supabase.functions.invoke("stepwise-assistant", {
-          body: { task: task.trim(), mode }
+          body: { task: task.trim(), mode: "NEW_TASK" }
         });
         if (!error && data && data.the_micro_step) result = data as AssistantResponse;
       }
-      const next = result ?? getDemoResponse(task, mode);
+      const next = result ?? getDemoResponse(task, "NEW_TASK");
       setResponse(next);
       if (!result)
         setNotice(
@@ -628,19 +621,6 @@ export default function App() {
                 placeholder="e.g. study for my exam, clean my room, reply to that email..."
                 required
               />
-              <label>WHAT DO YOU NEED RIGHT NOW?</label>
-              <div className="modes">
-                {modes.map((m) => (
-                  <button
-                    type="button"
-                    key={m.id}
-                    className={mode === m.id ? "selected" : ""}
-                    onClick={() => setMode(m.id)}
-                  >
-                    {m.label}
-                  </button>
-                ))}
-              </div>
               <button className="primary" type="submit" disabled={busy}>
                 {busy ? "Finding a tiny step…" : <>Find my micro-step <ArrowRight size={16} /></>}
               </button>
