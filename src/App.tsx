@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import { ArrowRight, Check, CheckCircle2, Clock3, LogOut, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 import { getDemoResponse, type AssistantResponse, type TaskMode } from "./lib/assistant";
+import Hero3D from "./components/Hero3D";
 import { hasSupabaseConfig, supabase } from "./lib/supabase";
 
 type SavedTask = {
@@ -42,6 +43,9 @@ export default function App() {
   const [reminderInput, setReminderInput] = useState(""); const [estimate, setEstimate] = useState("2");
   const [timeGuess, setTimeGuess] = useState(""); const [actualInput, setActualInput] = useState("");
   const timers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const alarmLoop = useRef<ReturnType<typeof setInterval> | null>(null);
+  const alarmAudio = useRef<AudioContext | null>(null);
+  const [ringingAlarm, setRingingAlarm] = useState("");
   const previousStorageKey = useRef(storageKey());
 
   useEffect(() => {
@@ -83,6 +87,39 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  function stopAlarm() {
+    if (alarmLoop.current) clearInterval(alarmLoop.current);
+    alarmLoop.current = null;
+    setRingingAlarm("");
+  }
+  function ringAlarm(title: string) {
+    setRingingAlarm(title);
+    if ("Notification" in window && Notification.permission === "granted") {
+      try { new Notification("Todo for ADHD · gentle alarm", { body: title, tag: "todo-adhd-alarm" }); } catch { /* tab alert remains available */ }
+    }
+    const beep = () => {
+      try {
+        const AudioContextClass = window.AudioContext;
+        if (!AudioContextClass) return;
+        const ctx = alarmAudio.current ?? new AudioContextClass();
+        alarmAudio.current = ctx;
+        if (ctx.state === "suspended") void ctx.resume();
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
+        oscillator.type = "sine";
+        oscillator.frequency.setValueAtTime(880, ctx.currentTime);
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.14, ctx.currentTime + 0.025);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.38);
+        oscillator.connect(gain); gain.connect(ctx.destination);
+        oscillator.start(); oscillator.stop(ctx.currentTime + 0.4);
+      } catch { /* notification and visible alarm are still useful */ }
+    };
+    beep();
+    if (alarmLoop.current) clearInterval(alarmLoop.current);
+    alarmLoop.current = setInterval(beep, 1400);
+    if ("vibrate" in navigator) navigator.vibrate?.([250, 120, 250]);
+  }
   function scheduleReminder(id: string, title: string, at: string, askPermission = true) {
     if (timers.current[id]) clearTimeout(timers.current[id]);
     const delay = new Date(at).getTime() - Date.now();
@@ -165,9 +202,10 @@ export default function App() {
 
   return <main className="shell">
     <nav className="nav"><a className="brand" href="#"><span className="mark"><Sparkles size={17}/></span>todo for ADHD</a><div className="nav-actions"><span className="status"><i/> gentle mode on</span>{session ? <button className="outline" onClick={signOut}><LogOut size={14}/> Sign out</button> : <a className="outline" href="#account">Sign in</a>}</div></nav>
+    {ringingAlarm && <div className="alarm-banner" role="alert"><span><b>Gentle alarm</b><small>{ringingAlarm}</small></span><button className="primary alarm-dismiss" onClick={stopAlarm}>Dismiss alarm <Check size={15}/></button></div>}
     <section className="hero">
       <div className="hero-copy"><p className="eyebrow">LESS PRESSURE. MORE MOMENTUM.</p><h1>You don't need<br/>to do it all.<br/><span>Just start here.</span></h1><p className="intro">A calmer way to get moving. Turn the thing you're avoiding into one tiny step you can do right now.</p><a className="cta" href="#workspace">Find my first step <ArrowRight size={16}/></a><div className="trust"><span><ShieldCheck size={15}/> No shame, ever</span><span><Clock3 size={15}/> Under 60 seconds</span></div></div>
-      <div className="visual"><div className="halo"/><div className="portrait" aria-label="Animated 3D-style abstract portrait illustration"><div className="head"/><div className="neck"/><div className="body"/></div><div className="float f1"><b>Small counts.</b><small>Progress without pressure</small></div><div className="float f2"><b>One thing at a time</b><small>That's the whole strategy</small></div><span className="art-note">A little progress, every day</span></div>
+      <div className="visual"><div className="halo"/><Hero3D/><div className="float f1"><b>Small counts.</b><small>Progress without pressure</small></div><div className="float f2"><b>One thing at a time</b><small>That's the whole strategy</small></div><span className="art-note">A little progress, every day</span></div>
     </section>
     <section id="workspace" className="workspace"><div className="section-head"><div><p className="eyebrow">YOUR WORKSPACE</p><h2>Let's make it smaller.</h2></div><p>No giant plans. No guilt spiral.<br/>Just the next doable thing.</p></div>
       <div className="columns"><div className="panel"><div className="panel-title"><span className="icon"><Sparkles size={17}/></span><div><b>What's on your mind?</b><small>Messy thoughts are welcome.</small></div></div><form onSubmit={makeStep}><label htmlFor="task">THE THING YOU NEED TO DO</label><textarea id="task" rows={4} value={task} onChange={e=>setTask(e.target.value)} placeholder="e.g. study for my exam, clean my room, reply to that email..." required/><label>WHAT DO YOU NEED RIGHT NOW?</label><div className="modes">{modes.map(m=><button type="button" key={m.id} className={mode===m.id?"selected":""} onClick={()=>setMode(m.id)}>{m.label}</button>)}</div><button className="primary" type="submit" disabled={busy}>{busy?"Finding a tiny step…":<>Find my micro-step <ArrowRight size={16}/></>}</button></form><p className="note"><ShieldCheck size={13}/> Your tasks stay on this device unless you choose to sync with your account.</p></div>
