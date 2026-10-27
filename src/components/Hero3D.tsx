@@ -33,7 +33,7 @@ export default function Hero3D() {
 
     const scene = new THREE.Scene();
     const camera = new THREE.PerspectiveCamera(32, Math.max(root.clientWidth, 1) / Math.max(root.clientHeight, 1), 0.1, 100);
-    camera.position.set(0, 1.0, 8.2);
+    camera.position.set(0, -0.72, 9.4);
 
     const character = new THREE.Group();
     scene.add(character);
@@ -77,6 +77,34 @@ export default function Hero3D() {
     add(torso, new THREE.SphereGeometry(0.48, 28, 20), shirt, [-0.72, -0.52, 0], [1.0, 0.82, 0.78]);
     add(torso, new THREE.SphereGeometry(0.48, 28, 20), shirt, [0.72, -0.52, 0], [1.0, 0.82, 0.78]);
     add(torso, new THREE.BoxGeometry(0.65, 0.045, 0.035), trim, [0, -0.9, 0.62]);
+
+    // Pelvis, running shorts, and articulated legs make this a full-body model.
+    const pelvis = new THREE.Group();
+    pelvis.position.set(0, -2.05, 0);
+    character.add(pelvis);
+    add(pelvis, new THREE.SphereGeometry(0.49, 32, 24), shirt, [0, 0, 0], [1.15, 0.62, 0.78]);
+    add(pelvis, new THREE.BoxGeometry(0.92, 0.36, 0.74), dark, [0, -0.12, 0], [1, 1, 1]);
+    add(pelvis, new THREE.BoxGeometry(0.94, 0.055, 0.77), trim, [0, 0.09, 0.015]);
+
+    const makeLeg = (side: -1 | 1) => {
+      const hip = new THREE.Group();
+      hip.position.set(side * 0.29, -0.08, 0);
+      pelvis.add(hip);
+      add(hip, new THREE.CapsuleGeometry(0.22, 0.63, 7, 16), skin, [0, -0.48, 0], [1.0, 1.0, 1.02]);
+      const knee = new THREE.Group();
+      knee.position.set(0, -0.92, 0.015);
+      hip.add(knee);
+      add(knee, new THREE.SphereGeometry(0.19, 22, 18), skin, [0, 0, 0], [1.0, 0.95, 0.95]);
+      add(knee, new THREE.CapsuleGeometry(0.155, 0.55, 7, 16), skin, [0, -0.42, 0], [1.0, 1.0, 0.95]);
+      const foot = new THREE.Group();
+      foot.position.set(0, -0.77, 0.04);
+      knee.add(foot);
+      add(foot, new THREE.BoxGeometry(0.24, 0.16, 0.48), dark, [0, -0.02, 0.12], [1, 1, 1]);
+      add(foot, new THREE.BoxGeometry(0.25, 0.045, 0.49), trim, [0, -0.105, 0.13], [1, 1, 1]);
+      return { hip, knee, foot };
+    };
+    const leftLeg = makeLeg(-1);
+    const rightLeg = makeLeg(1);
 
     // Head pivot: separate from torso so the neck/head can turn naturally.
     const head = new THREE.Group();
