@@ -1,0 +1,12 @@
+{
+  "name": "Todo for ADHD",
+  "short_name": "Todo ADHD",
+  "description": "A calmer way to start overwhelming tasks, one tiny step at a time.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0b0d0c",
+  "theme_color": "#0b0d0c",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
