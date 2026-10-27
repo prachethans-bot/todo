@@ -24,9 +24,19 @@ Deno.serve(async (req) => {
   const task = typeof body.task === "string" ? body.task.trim().slice(0, 500) : "";
   const mode = typeof body.mode === "string" && modes.includes(body.mode) ? body.mode : "NEW_TASK";
   if (!task) return new Response(JSON.stringify({ error: "Enter a task first." }), { status: 400, headers: cors });
+  const crisisPattern = /\\b(suicid(e|al)|kill myself|end my life|self[- ]?harm|hurt myself)\\b/i;
+  if (crisisPattern.test(task)) {
+    const safety = { mode, optimized_task_title: "Get support right now",
+      the_micro_step: "Please pause the task for now and reach out to a trusted adult or someone you trust who can stay with you. If you may be in immediate danger, contact your local emergency service now.",
+      dopamine_hook: "You deserve support and do not have to handle this alone.",
+      alarm_settings: { enabled: false, at: null, label: "Reminders paused" },
+      time_guess_prompt: "Can you contact someone you trust right now?",
+      time_feedback: "There is no task or time goal to meet right now. Your safety matters most." };
+    return new Response(JSON.stringify(safety), { headers: cors });
+  }
   const apiKey = Deno.env.get("OPENAI_API_KEY");
   if (!apiKey) return new Response(JSON.stringify(fallback(task, mode)), { headers: cors });
-  const system = "You are Stepwise, a calm, practical task assistant. Convert a task into one action that can be started in under 60 seconds. Be kind and non-judgmental. Never guilt, shame, diagnose, or overpromise. Return only JSON with fields mode, optimized_task_title, the_micro_step, dopamine_hook, alarm_settings { enabled, at, label }, time_guess_prompt, time_feedback. Set alarm_settings.enabled false and at null; reminders are handled by the app. Keep the micro step concrete, tiny, and safe. Preserve the supplied mode.";
+  const system = "You are Todo for ADHD, a calm, practical task assistant. Convert a task into one action that can be started in under 60 seconds. Be kind and non-judgmental. Never guilt, shame, diagnose, or overpromise. If a user expresses suicidal thoughts or intent to self-harm, prioritize immediate safety, encourage contacting a trusted person and local emergency services if there is immediate danger, and do not treat it as a productivity task. Return only JSON with fields mode, optimized_task_title, the_micro_step, dopamine_hook, alarm_settings { enabled, at, label }, time_guess_prompt, time_feedback. Set alarm_settings.enabled false and at null; reminders are handled by the app. Keep the micro step concrete, tiny, and safe. Preserve the supplied mode.";
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", { method: "POST", headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({ model: Deno.env.get("OPENAI_MODEL") || "gpt-4o-mini", temperature: 0.5, response_format: { type: "json_object" }, messages: [{ role: "system", content: system }, { role: "user", content: JSON.stringify({ task, mode }) }] }) });
