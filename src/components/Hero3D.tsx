@@ -42,6 +42,8 @@ export default function Hero3D() {
     const shirt = new THREE.MeshStandardMaterial({ color: 0x101510, roughness: 0.88 });
     const trim = new THREE.MeshStandardMaterial({ color: 0x7da85f, roughness: 0.5, metalness: 0.15 });
     const dark = new THREE.MeshStandardMaterial({ color: 0x17130f, roughness: 0.95 });
+    const beard = new THREE.MeshStandardMaterial({ color: 0x241b15, roughness: 1 });
+    const lip = new THREE.MeshStandardMaterial({ color: 0x503126, roughness: 0.85 });
     const eyeMat = new THREE.MeshStandardMaterial({ color: 0x090b08, roughness: 0.3 });
     const add = (geo: THREE.BufferGeometry, mat: THREE.Material, pos: [number, number, number], scale?: [number, number, number]) => {
       const mesh = new THREE.Mesh(geo, mat);
@@ -56,16 +58,28 @@ export default function Hero3D() {
     add(new THREE.SphereGeometry(0.48, 24, 18), shirt, [0.72, -0.62, 0], [1.0, 0.82, 0.78]);
     // Neck and head
     add(new THREE.CylinderGeometry(0.23, 0.31, 0.55, 20), skin, [0, 0.05, 0]);
-    add(new THREE.SphereGeometry(0.58, 32, 24), skin, [0, 0.83, 0.02], [0.82, 1.0, 0.78]);
+    add(new THREE.SphereGeometry(0.58, 40, 32), skin, [0, 0.83, 0.02], [0.82, 1.0, 0.78]);
+    // Sculpted jaw and short beard shading give the face a more lifelike silhouette.
+    add(new THREE.SphereGeometry(0.43, 32, 22), beard, [0, 0.53, 0.27], [0.84, 0.56, 0.67]);
+    add(new THREE.SphereGeometry(0.37, 32, 22), skinLight, [0, 0.62, 0.43], [0.88, 0.52, 0.43]);
     add(new THREE.SphereGeometry(0.16, 20, 14), skinLight, [-0.47, 0.8, 0.0], [0.65, 0.85, 0.6]);
     add(new THREE.SphereGeometry(0.16, 20, 14), skinLight, [0.47, 0.8, 0.0], [0.65, 0.85, 0.6]);
+    // Ear folds, cheek planes, and a modeled nose bridge.
+    add(new THREE.TorusGeometry(0.085, 0.025, 8, 16), skinLight, [-0.49, 0.8, 0.11], [0.75, 1.2, 0.8]).rotation.y = Math.PI / 2;
+    add(new THREE.TorusGeometry(0.085, 0.025, 8, 16), skinLight, [0.49, 0.8, 0.11], [0.75, 1.2, 0.8]).rotation.y = Math.PI / 2;
+    add(new THREE.SphereGeometry(0.19, 20, 16), skinLight, [-0.31, 0.62, 0.38], [1, 0.65, 0.45]);
+    add(new THREE.SphereGeometry(0.19, 20, 16), skinLight, [0.31, 0.62, 0.38], [1, 0.65, 0.45]);
     // Brow ridge, eyes, nose and mouth add readable facial structure
     add(new THREE.BoxGeometry(0.27, 0.075, 0.08), dark, [-0.2, 0.91, 0.58], [1, 1, 1]);
     add(new THREE.BoxGeometry(0.27, 0.075, 0.08), dark, [0.2, 0.91, 0.58], [1, 1, 1]);
     add(new THREE.SphereGeometry(0.047, 12, 10), eyeMat, [-0.19, 0.83, 0.63]);
     add(new THREE.SphereGeometry(0.047, 12, 10), eyeMat, [0.19, 0.83, 0.63]);
-    add(new THREE.ConeGeometry(0.105, 0.29, 12), skinLight, [0, 0.67, 0.66], [0.8, 1, 0.85]);
-    add(new THREE.BoxGeometry(0.23, 0.025, 0.035), dark, [0, 0.48, 0.65]);
+    const nose = add(new THREE.ConeGeometry(0.105, 0.29, 16), skinLight, [0, 0.67, 0.66], [0.8, 1, 0.85]);
+    nose.rotation.z = Math.PI;
+    add(new THREE.SphereGeometry(0.06, 12, 10), skinLight, [-0.065, 0.56, 0.68], [1, 0.65, 0.8]);
+    add(new THREE.SphereGeometry(0.06, 12, 10), skinLight, [0.065, 0.56, 0.68], [1, 0.65, 0.8]);
+    add(new THREE.BoxGeometry(0.23, 0.025, 0.035), lip, [0, 0.48, 0.69]);
+    add(new THREE.BoxGeometry(0.18, 0.018, 0.025), skinLight, [0, 0.445, 0.69]);
     // Arms: slightly angled down to give the character a strong stance
     const leftArm = add(new THREE.CapsuleGeometry(0.19, 0.86, 5, 12), skin, [-0.96, -1.18, 0.02]);
     leftArm.rotation.z = -0.15;
