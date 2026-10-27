@@ -6,14 +6,19 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "cap:sync": "npm run build && cap sync",
+    "cap:android": "cap open android",
+    "cap:add:android": "cap add android"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "three": "^0.170.0"
+    "three": "^0.170.0",
+    "@capacitor/core": "^6.2.1",
+    "@capacitor/local-notifications": "^6.1.2"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
@@ -21,6 +26,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "typescript": "~5.6.2",
     "vite": "^6.0.5",
-    "@types/three": "^0.170.0"
+    "@types/three": "^0.170.0",
+    "@capacitor/cli": "^6.2.1"
   }
 }
