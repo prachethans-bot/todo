@@ -1,0 +1,4 @@
+project_id = "stepwise"
+
+[functions.stepwise-assistant]
+verify_jwt = true
