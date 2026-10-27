@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, Check, RefreshCw, X, ShieldCheck } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import { Capacitor } from "@capacitor/core";
+import { Camera, CameraDirection, CameraResultType, CameraSource } from "@capacitor/camera";
 
 type Props = {
   taskTitle: string;
@@ -21,6 +23,11 @@ export function TaskProofCamera({ taskTitle, onCancel, onConfirm }: Props) {
     setOpening(true);
     setSnapshot(null);
     try {
+      // Native Android uses Capacitor's camera plugin so Android permission prompts work.
+      if (Capacitor.isNativePlatform()) {
+        stopCamera();
+        return;
+      }
       if (!navigator.mediaDevices?.getUserMedia) {
         throw new Error("Camera access is unavailable. Open the app over HTTPS or use the Android app.");
       }
@@ -61,7 +68,29 @@ export function TaskProofCamera({ taskTitle, onCancel, onConfirm }: Props) {
     return () => stopCamera();
   }, []);
 
-  function capture() {
+  async function capture() {
+    if (Capacitor.isNativePlatform()) {
+      setError("");
+      setOpening(true);
+      try {
+        const photo = await Camera.getPhoto({
+          quality: 78,
+          allowEditing: false,
+          resultType: CameraResultType.DataUrl,
+          source: CameraSource.Camera,
+          direction: CameraDirection.Rear,
+          saveToGallery: false
+        });
+        if (!photo.dataUrl) throw new Error("The camera did not return a photo. Please try again.");
+        setSnapshot(photo.dataUrl);
+      } catch (e) {
+        const cameraError = e as { message?: string };
+        setError(cameraError?.message || "Could not capture the photo. Please allow camera access and try again.");
+      } finally {
+        setOpening(false);
+      }
+      return;
+    }
     const video = videoRef.current;
     if (!video || !video.videoWidth || !video.videoHeight) {
       setError("Camera is not ready yet. Try again in a moment.");
@@ -120,7 +149,7 @@ export function TaskProofCamera({ taskTitle, onCancel, onConfirm }: Props) {
         <p className="proof-task">{taskTitle}</p>
         <p className="proof-description">Take a quick photo of your workspace as you get ready to begin. The photo is sent to Gemini for a temporary AI check, but is not saved to your gallery or your app database.</p>
         <div className="proof-preview">
-          {snapshot ? <img src={snapshot} alt="Temporary task-start photo preview" /> : <video ref={videoRef} autoPlay muted playsInline />}
+          {snapshot ? <img src={snapshot} alt="Temporary task-start photo preview" /> : Capacitor.isNativePlatform() ? <span className="proof-camera-status">Tap Capture photo to open your camera</span> : <video ref={videoRef} autoPlay muted playsInline />}
           {opening && !snapshot && <span className="proof-camera-status">Opening camera…</span>}
         </div>
         {error && <p className="proof-error" role="alert">{error}</p>}
@@ -133,7 +162,7 @@ export function TaskProofCamera({ taskTitle, onCancel, onConfirm }: Props) {
           ) : error ? (
             <button type="button" className="primary" disabled={opening} onClick={() => void openCamera()}><RefreshCw size={15} /> {opening ? "Opening camera…" : "Try camera again"}</button>
           ) : (
-            <button type="button" className="primary" disabled={opening} onClick={capture}><Camera size={15} /> Capture photo</button>
+            <button type="button" className="primary" disabled={opening} onClick={() => void capture()}><Camera size={15} /> {opening ? "Opening camera…" : "Capture photo"}</button>
           )}
         </div>
         <p className="proof-privacy">Temporary Gemini check · not saved to your gallery or app database · task stays incomplete</p>
