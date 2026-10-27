@@ -1,4 +1,5 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { FormEvent } from "react";
 import { ArrowRight, Check, CheckCircle2, Clock3, LogOut, ShieldCheck, Sparkles, Trash2 } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 import { getDemoResponse, type AssistantResponse, type TaskMode } from "./lib/assistant";
