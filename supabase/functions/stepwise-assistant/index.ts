@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
   const task = typeof body.task === "string" ? body.task.trim().slice(0, 500) : "";
   const mode = typeof body.mode === "string" && modes.includes(body.mode) ? body.mode : "NEW_TASK";
   if (!task) return new Response(JSON.stringify({ error: "Enter a task first." }), { status: 400, headers: cors });
-  const crisisPattern = /\b(suicid(e|al)|kill myself|end my life|self[- ]?harm|hurt myself|can't keep myself safe|cannot keep myself safe)\b/i;
+  const crisisPattern = /\\b(suicid(e|al)|kill myself|end my life|self[- ]?harm|hurt myself)\\b/i;
   if (crisisPattern.test(task)) {
     const safety = { mode, optimized_task_title: "Get support right now",
       the_micro_step: "Please pause the task for now and reach out to a trusted adult or someone you trust who can stay with you. If you may be in immediate danger, contact your local emergency service now.",
