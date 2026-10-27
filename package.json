@@ -18,7 +18,8 @@
     "react-dom": "^18.3.1",
     "three": "^0.170.0",
     "@capacitor/core": "^6.2.1",
-    "@capacitor/local-notifications": "^6.1.2"
+    "@capacitor/local-notifications": "^6.1.2",
+    "@capacitor/android": "^6.2.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
