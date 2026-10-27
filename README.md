@@ -143,7 +143,7 @@ npm run preview
 ## Known limitations
 
 - The hero is a procedurally built 3D athlete, not an exact David Goggins likeness or a scanned/rigged human model. A faithful likeness needs a properly licensed, detailed 3D model and animation asset.
-- The alarm repeats sound while the app page is running and visible; browser notifications require permission. Browsers can suspend timers, and web apps cannot guarantee alarms when closed or the device is asleep. For guaranteed background alarms, package as a native app with OS-scheduled notifications or add a push-notification backend.
+- Native local notifications can be scheduled with the operating system when the project is packaged with Capacitor and installed on a device; delivery depends on OS permission and battery/system settings. This is a scheduled system notification, not a guaranteed continuously ringing alarm-clock service.\n- In web/PWA mode, the repeating in-page alarm only works while the page is running. Browser timers are not reliable when the app is closed or the device sleeps.
 - Cloud task sync requires the SQL migration and a correctly configured Supabase project.
 - The AI function requires deployment; real AI generation additionally requires an OpenAI API key stored as a server-side secret.
 - The app is an early-stage product and should receive a local build, accessibility, and security review before public launch.
