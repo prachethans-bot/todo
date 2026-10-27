@@ -14,3 +14,26 @@ jobs:
           node-version: 20
       - run: npm install
       - run: npm run build
+      - name: Install Chromium for browser smoke test
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Start production preview
+        run: |
+          npm run preview -- --host 127.0.0.1 > /tmp/todo-preview.log 2>&1 &
+          echo $! > /tmp/todo-preview.pid
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4173/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/todo-preview.log
+          exit 1
+      - name: Check 3D hero in Chromium
+        run: node scripts/browser-smoke.mjs
+      - name: Upload browser screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: todo-for-adhd-browser-check
+          path: hero3d-browser-check.png
+          if-no-files-found: ignore
