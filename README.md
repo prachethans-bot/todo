@@ -48,6 +48,12 @@ supabase functions deploy stepwise-assistant
 
 If you do not want AI enabled yet, omit the OpenAI key and the authenticated function returns its built-in response. Never put an OpenAI key, service-role key, or other private secret in a `VITE_*` variable or commit it to GitHub.
 
+## Accessibility and motion
+
+- Keyboard focus styles and a skip link are included.
+- The hero has a CSS-built animated 3D-style abstract portrait. Motion is reduced when the operating system requests reduced motion.
+- The portrait is an abstract illustration, not an official likeness or an imported 3D model.
+
 ## Build
 
 ```bash
