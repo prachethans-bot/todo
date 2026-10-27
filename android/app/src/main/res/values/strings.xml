@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Todo for ADHD</string>
+    <string name="title_activity_main">Todo for ADHD</string>
+    <string name="package_name">com.todo.foradhd</string>
+    <string name="custom_url_scheme">com.todo.foradhd</string>
+</resources>

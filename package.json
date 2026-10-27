@@ -12,22 +12,24 @@
     "cap:add:android": "cap add android"
   },
   "dependencies": {
+    "@capacitor/android": "^6.2.1",
+    "@capacitor/core": "^6.2.1",
+    "@capacitor/local-notifications": "^6.1.2",
+    "@capacitor/preferences": "^6.0.0",
     "@supabase/supabase-js": "^2.57.0",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "three": "^0.170.0",
-    "@capacitor/core": "^6.2.1",
-    "@capacitor/local-notifications": "^6.1.2",
-    "@capacitor/android": "^6.2.1"
+    "three": "^0.170.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^6.2.1",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
-    "@vitejs/plugin-react": "^4.3.4",
-    "typescript": "~5.6.2",
-    "vite": "^6.0.5",
     "@types/three": "^0.170.0",
-    "@capacitor/cli": "^6.2.1"
+    "@vitejs/plugin-react": "^4.3.4",
+    "playwright": "^1.64.1",
+    "typescript": "~5.6.2",
+    "vite": "^6.0.5"
   }
 }
