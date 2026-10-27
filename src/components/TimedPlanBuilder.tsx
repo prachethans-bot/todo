@@ -54,7 +54,6 @@ export function TimedPlanBuilder() {
   const nativeIds = useRef<number[]>([]);
   const isNative = Capacitor.isNativePlatform();
 
-  const elapsed = status === "running" && startedAt ? Math.max(0, now - startedAt - pausedMs) : pausedMs;
   const remainingMs = Math.max(0, (steps[current]?.minutes ?? 0) * 60000 - (status === "running" ? Math.max(0, now - (startedAt ?? now)) : pausedMs));
   const remainingTotal = steps.reduce((sum, s, i) => sum + (i >= current ? s.minutes : 0), 0);
 
@@ -86,8 +85,10 @@ export function TimedPlanBuilder() {
   async function startPlan() {
     if (!steps.length) return;
     stopSchedules();
-    const permission = isNative ? await LocalNotifications.requestPermissions() : ("Notification" in window ? await Notification.requestPermission() : "denied");
-    if ((isNative && permission.display !== "granted") || (!isNative && permission !== "granted")) {
+    const permissionGranted = isNative
+      ? (await LocalNotifications.requestPermissions()).display === "granted"
+      : ("Notification" in window ? await Notification.requestPermission() === "granted" : false);
+    if (!permissionGranted) {
       setNotice("Allow notifications to receive step reminders. On the website, alarms only work while this tab stays open.");
     }
     const start = Date.now();
@@ -98,10 +99,10 @@ export function TimedPlanBuilder() {
       const at = start + offset;
       const step = steps[i];
       if (at > Date.now() + 500) {
-        if (isNative && permission.display === "granted") {
+        if (isNative && permissionGranted) {
           const id = makeId(); nativeIds.current.push(id);
           await LocalNotifications.schedule({ notifications: [{ id, title: i === current ? "Your focus step starts now" : "Next step", body: step.title, schedule: { at: new Date(at) }, sound: "default" }] });
-        } else if (!isNative && permission === "granted") {
+        } else if (!isNative && permissionGranted) {
           const timer = window.setTimeout(() => { try { new Notification("Todo · Next step", { body: step.title }); } catch { /* browser blocked */ } }, Math.max(0, at - Date.now()));
           browserTimers.current.push(timer);
         }
