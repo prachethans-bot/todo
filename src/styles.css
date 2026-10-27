@@ -22,3 +22,17 @@ button:disabled{opacity:.6;cursor:wait}.notice{padding:12px 15px;border:1px soli
 @media(max-width:760px){.shell{padding:0 20px}.nav{height:68px}.brand{font-size:16px}.nav-actions{gap:8px}.status{display:none}.hero{grid-template-columns:1fr;padding:46px 0 55px;gap:15px}.hero h1{font-size:clamp(46px,12vw,65px);letter-spacing:-2.5px}.visual{height:340px}.portrait{transform:scale(.88)}.f1{right:0;top:42px}.f2{left:0;bottom:35px}.columns{grid-template-columns:1fr}.section-head{align-items:start;gap:16px;flex-direction:column}.section-head h2,.auth h2{font-size:27px}.panel{padding:19px}.trust{flex-wrap:wrap}.auth{grid-template-columns:1fr;gap:20px}.tasks-section{padding-bottom:45px}footer{gap:12px;flex-wrap:wrap}footer span{font-size:9px}}
 @media(max-width:420px){.nav .brand{font-size:14px;gap:7px}.mark{width:27px;height:27px}.outline{padding:8px;font-size:10px}.modes{grid-template-columns:1fr 1fr}.float{padding:10px}.float b{font-size:10px}.float small{font-size:8px}.art-note{right:8px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+
+
+/* Three.js hero scene and dismissible ringing alarm */
+.hero3d{position:absolute;inset:16px 0 8px;z-index:1;display:grid;place-items:center;pointer-events:none}
+.hero3d canvas{display:block;width:100%;height:100%;max-width:390px}
+.visual .float{z-index:2}
+.visual .art-note{z-index:2}
+.alarm-banner{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:18px 0 0;padding:14px 16px;border:1px solid #a7ef7966;border-radius:13px;background:#1b2819;box-shadow:0 0 35px #a7ef7912}
+.alarm-banner>span{min-width:0;display:grid;gap:5px}
+.alarm-banner b{font-size:12px;color:var(--green)}
+.alarm-banner small{font-size:11px;line-height:1.5;color:#d0d9cd;overflow-wrap:anywhere}
+.alarm-dismiss{width:auto;min-width:135px;padding:11px 13px;flex-shrink:0}
+@media(max-width:620px){.hero3d{inset:8px 0 0}.hero3d canvas{max-width:340px}.alarm-banner{align-items:stretch;flex-direction:column}.alarm-dismiss{width:100%}}
+@media(prefers-reduced-motion:reduce){.hero3d{animation:none}}
