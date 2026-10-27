@@ -50,7 +50,6 @@ export default function App() {
   const [ringingAlarm, setRingingAlarm] = useState("");
   const previousStorageKey = useRef(storageKey());
   const nativeAlarmIds = useRef<Record<string, number>>({});
-  const nativeAlarmIds = useRef<Record<string, number>>({});
 
   useEffect(() => {
     const nextKey = storageKey(session?.user.id);
