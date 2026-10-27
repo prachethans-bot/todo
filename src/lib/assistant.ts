@@ -4,8 +4,19 @@ export type AssistantResponse = {
   alarm_settings: { enabled: boolean; at: string | null; label: string };
   time_guess_prompt: string; time_feedback: string;
 };
+const crisisPattern = /\b(suicid(e|al)|kill myself|end my life|self[- ]?harm|hurt myself|can't keep myself safe|cannot keep myself safe)\b/i;
 export function getDemoResponse(task: string, mode: TaskMode): AssistantResponse {
   const title = task.trim() || "Get started";
+  if (crisisPattern.test(title)) {
+    return {
+      mode, optimized_task_title: "Get support right now",
+      the_micro_step: "Please pause the task for now and reach out to a trusted adult or someone you trust who can stay with you. If you may be in immediate danger, contact your local emergency service now.",
+      dopamine_hook: "You deserve support and do not have to handle this alone.",
+      alarm_settings: { enabled: false, at: null, label: "Reminders paused" },
+      time_guess_prompt: "Can you contact someone you trust right now?",
+      time_feedback: "There is no task or time goal to meet right now. Your safety matters most."
+    };
+  }
   const step = mode === "TOO_HARD"
     ? "Make the task smaller again: open the thing you need and do just one visible action. Stopping after that is allowed."
     : mode === "NEXT_STEP"
