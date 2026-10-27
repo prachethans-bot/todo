@@ -1542,3 +1542,17 @@ footer b {
 .proof-controls { margin-top:12px; }
 .proof-controls button { flex:1; min-height:44px; }
 .proof-privacy { text-align:center; margin:12px 0 0; color:#7f8a80; font-size:9px; }
+
+
+/* Essay alternative for task-start verification */
+.proof-method-switch { display:flex; flex-direction:column; align-items:stretch; gap:9px; margin-top:18px; padding-top:15px; border-top:1px solid #293329; }
+.proof-method-switch > span { color:#9da99b; font-size:10px; text-align:center; }
+.proof-method-switch .outline { justify-content:center; min-height:40px; width:100%; border-color:#526746; color:#d7e4d1; }
+.proof-essay { margin-top:10px; }
+.proof-essay label { margin:0 0 8px; font-size:9px; line-height:1.5; letter-spacing:1px; }
+.proof-essay textarea { width:100%; min-height:130px; margin:0; resize:vertical; background:#0b0e0b; border:1px solid #344133; border-radius:11px; padding:12px; color:#eef2eb; font-size:12px; line-height:1.65; }
+.proof-essay textarea:focus { border-color:#8dcf68; outline:none; box-shadow:0 0 0 3px #a7ef7910; }
+.proof-word-count { margin-top:7px; text-align:right; font-size:10px; color:#8f9b8d; font-variant-numeric:tabular-nums; }
+.proof-word-count.over-limit { color:#ffc2b8; }
+.proof-essay .proof-description { margin:10px 0; }
+.proof-essay .proof-controls { margin-top:12px; }
