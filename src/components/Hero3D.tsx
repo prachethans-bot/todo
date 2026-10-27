@@ -36,6 +36,7 @@ export default function Hero3D() {
     camera.position.set(0, -0.72, 10.9);
 
     const character = new THREE.Group();
+    character.scale.setScalar(1.16);
     scene.add(character);
 
     scene.add(new THREE.HemisphereLight(0xd9f6d0, 0x111711, 2.2));
@@ -54,6 +55,9 @@ export default function Hero3D() {
     const beard = new THREE.MeshStandardMaterial({ color: 0x241b15, roughness: 1 });
     const lip = new THREE.MeshStandardMaterial({ color: 0x503126, roughness: 0.85 });
     const eyeMat = new THREE.MeshStandardMaterial({ color: 0x090b08, roughness: 0.3 });
+    const irisMat = new THREE.MeshStandardMaterial({ color: 0x3b2418, roughness: 0.28 });
+    const eyeWhite = new THREE.MeshStandardMaterial({ color: 0xd7d0b9, roughness: 0.45 });
+    const shortsMat = new THREE.MeshStandardMaterial({ color: 0x20291f, roughness: 0.82 });
 
     const add = (
       parent: THREE.Object3D,
@@ -83,8 +87,9 @@ export default function Hero3D() {
     pelvis.position.set(0, -2.05, 0);
     character.add(pelvis);
     add(pelvis, new THREE.SphereGeometry(0.49, 32, 24), shirt, [0, 0, 0], [1.15, 0.62, 0.78]);
-    add(pelvis, new THREE.BoxGeometry(0.92, 0.36, 0.74), dark, [0, -0.12, 0], [1, 1, 1]);
+    add(pelvis, new THREE.BoxGeometry(0.92, 0.36, 0.74), shortsMat, [0, -0.12, 0], [1, 1, 1]);
     add(pelvis, new THREE.BoxGeometry(0.94, 0.055, 0.77), trim, [0, 0.09, 0.015]);
+    add(pelvis, new THREE.BoxGeometry(0.94, 0.035, 0.76), dark, [0, -0.28, 0.005]);
 
     const makeLeg = (side: -1 | 1) => {
       const hip = new THREE.Group();
@@ -101,6 +106,7 @@ export default function Hero3D() {
       knee.add(foot);
       add(foot, new THREE.BoxGeometry(0.24, 0.16, 0.48), dark, [0, -0.02, 0.12], [1, 1, 1]);
       add(foot, new THREE.BoxGeometry(0.25, 0.045, 0.49), trim, [0, -0.105, 0.13], [1, 1, 1]);
+      add(foot, new THREE.BoxGeometry(0.12, 0.025, 0.19), skinLight, [0, 0.065, 0.30], [1, 1, 1]);
       return { hip, knee, foot };
     };
     const leftLeg = makeLeg(-1);
@@ -123,14 +129,25 @@ export default function Hero3D() {
     add(head, new THREE.SphereGeometry(0.19, 24, 18), skinLight, [0.31, 0.52, 0.38], [1, 0.65, 0.45]);
     add(head, new THREE.BoxGeometry(0.27, 0.075, 0.08), dark, [-0.2, 0.81, 0.58]);
     add(head, new THREE.BoxGeometry(0.27, 0.075, 0.08), dark, [0.2, 0.81, 0.58]);
-    add(head, new THREE.SphereGeometry(0.047, 16, 12), eyeMat, [-0.19, 0.73, 0.63]);
-    add(head, new THREE.SphereGeometry(0.047, 16, 12), eyeMat, [0.19, 0.73, 0.63]);
+    // Layered sclera, iris, and pupils make the face readable at hero size.
+    add(head, new THREE.SphereGeometry(0.066, 24, 18), eyeWhite, [-0.19, 0.73, 0.625], [1.05, 0.72, 0.55]);
+    add(head, new THREE.SphereGeometry(0.066, 24, 18), eyeWhite, [0.19, 0.73, 0.625], [1.05, 0.72, 0.55]);
+    add(head, new THREE.SphereGeometry(0.036, 20, 16), irisMat, [-0.19, 0.73, 0.674], [1, 0.92, 0.6]);
+    add(head, new THREE.SphereGeometry(0.036, 20, 16), irisMat, [0.19, 0.73, 0.674], [1, 0.92, 0.6]);
+    add(head, new THREE.SphereGeometry(0.019, 16, 12), eyeMat, [-0.19, 0.73, 0.695]);
+    add(head, new THREE.SphereGeometry(0.019, 16, 12), eyeMat, [0.19, 0.73, 0.695]);
     const nose = add(head, new THREE.ConeGeometry(0.105, 0.29, 18), skinLight, [0, 0.57, 0.66], [0.8, 1, 0.85]);
     nose.rotation.z = Math.PI;
     add(head, new THREE.SphereGeometry(0.06, 16, 12), skinLight, [-0.065, 0.46, 0.68], [1, 0.65, 0.8]);
     add(head, new THREE.SphereGeometry(0.06, 16, 12), skinLight, [0.065, 0.46, 0.68], [1, 0.65, 0.8]);
+    // Moustache, defined lips, chin beard and nostrils add stronger facial character.
+    add(head, new THREE.SphereGeometry(0.105, 24, 16), beard, [-0.075, 0.405, 0.67], [1.0, 0.43, 0.45]);
+    add(head, new THREE.SphereGeometry(0.105, 24, 16), beard, [0.075, 0.405, 0.67], [1.0, 0.43, 0.45]);
+    add(head, new THREE.SphereGeometry(0.045, 16, 12), dark, [-0.055, 0.475, 0.73], [1.0, 0.55, 0.45]);
+    add(head, new THREE.SphereGeometry(0.045, 16, 12), dark, [0.055, 0.475, 0.73], [1.0, 0.55, 0.45]);
     add(head, new THREE.BoxGeometry(0.23, 0.025, 0.035), lip, [0, 0.38, 0.69]);
     add(head, new THREE.BoxGeometry(0.18, 0.018, 0.025), skinLight, [0, 0.345, 0.69]);
+    add(head, new THREE.SphereGeometry(0.24, 28, 20), beard, [0, 0.29, 0.37], [0.72, 0.42, 0.62]);
 
     // Shoulder/elbow pivots form a simple reusable arm rig.
     const makeArm = (side: -1 | 1) => {
