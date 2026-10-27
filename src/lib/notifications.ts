@@ -53,8 +53,7 @@ export async function setupNotificationChannels(): Promise<void> {
         {
           id: ACTION_TYPE_ID,
           actions: [
-            { id: "DONE", title: "Done", destructive: false },
-            { id: "SNOOZE", title: "Snooze 5 min", destructive: false }
+            { id: "START", title: "Open task", destructive: false }
           ]
         }
       ]
