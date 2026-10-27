@@ -18,3 +18,50 @@ button:disabled{opacity:.6;cursor:wait}.notice{padding:12px 15px;border:1px soli
 .alarm-dismiss{width:auto;min-width:135px;padding:11px 13px;flex-shrink:0}
 @media(max-width:620px){.alarm-banner{align-items:stretch;flex-direction:column}.alarm-dismiss{width:100%}}
 
+
+
+/* Mobile-first dashboard styling based on the supplied reference */
+@media(max-width:620px){
+ body{background:#101210}
+ .shell{max-width:430px;padding:0 11px}
+ .nav{height:54px;border:0;padding:0 6px}
+ .brand{font:800 9px 'DM Sans',sans-serif;text-transform:uppercase;letter-spacing:1.4px;color:#aebc82}
+ .brand .mark{display:none}
+ .nav-actions{gap:6px}.status{display:none}
+ .outline{padding:8px 10px;border-radius:20px;font-size:10px}
+ .hero{display:flex;flex-direction:column;align-items:stretch;gap:0;padding:4px 0 11px}
+ .hero-copy{display:none}
+ .visual{display:block;height:auto;min-height:0;transform:none;margin:0;overflow:hidden;border-radius:24px;background:#000;aspect-ratio:1/0.91}
+ .halo,.float,.art-note{display:none}
+ .hero-portrait{position:absolute;inset:0;width:100%;height:100%;max-width:none;transform:none;object-fit:cover;object-position:center;filter:grayscale(1);box-shadow:none;border-radius:24px}
+ .workspace{padding:0 0 20px;border:0}
+ .section-head{display:flex;align-items:end;justify-content:space-between;gap:10px;margin:19px 5px 13px}
+ .section-head .eyebrow{font-size:8px;letter-spacing:1.5px}
+ .section-head h2{font:700 18px/1.2 Manrope,sans-serif;letter-spacing:-.6px;margin-top:7px}
+ .section-head>p{font-size:9px;text-align:right;line-height:1.5;margin:0}
+ .columns{display:block}
+ .panel{padding:12px;border-radius:18px;background:#1b1e1b;border-color:#303530;margin-bottom:10px}
+ .panel-title{display:none}
+ .panel form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
+ .panel form>label{display:none}
+ .panel form textarea{grid-column:1/-1;resize:none;min-height:36px;height:36px;padding:9px 10px;margin:0;background:transparent;border:0;font-size:12px}
+ .panel form .modes{grid-column:1/-1;display:flex;gap:5px;margin:0}
+ .panel form .modes button{font-size:8px;padding:6px;border-radius:8px}
+ .panel form .primary{grid-column:1/-1;width:auto;justify-self:end;min-height:31px;padding:8px 14px;border-radius:10px;font-size:10px}
+ .note{font-size:8px;line-height:1.5}
+ .result{min-height:0;padding:14px}
+ .empty{margin:12px auto}.empty .large{display:none}
+ .empty h3{font-size:16px;margin:7px 0}.empty>p:last-child{font-size:10px}
+ .result h3{font-size:17px}
+ .tasks-section{padding:0 0 40px;border:0}
+ .tasks-section .section-head{margin-top:14px}
+ .task-list{gap:0}
+ .saved-task{background:transparent;border:0;border-bottom:1px solid #2a2d2a;border-radius:0;padding:12px 5px;gap:10px}
+ .done-button{width:21px;height:21px;flex-basis:21px;min-height:21px}
+ .saved-task-copy>b{font-size:11px}.saved-task-copy>p{font-size:10px;margin:4px 0}
+ .saved-task-copy>small{font-size:8px}.icon-button{padding:3px}
+ .time-feedback{font-size:9px}.notice{font-size:9px;padding:9px}
+ .auth{padding:35px 0;gap:15px}.auth h2{font-size:23px}
+ footer{min-height:55px;font-size:8px}
+}
+@media(min-width:621px){.hero-portrait{width:min(100%,380px);height:auto;aspect-ratio:1;object-fit:cover}}
