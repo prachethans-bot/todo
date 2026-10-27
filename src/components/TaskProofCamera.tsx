@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, Check, RefreshCw, X } from "lucide-react";
+import { Camera, Check, RefreshCw, X, ShieldCheck } from "lucide-react";
+import { supabase } from "../lib/supabase";
 
 type Props = {
   taskTitle: string;
@@ -13,6 +14,7 @@ export function TaskProofCamera({ taskTitle, onCancel, onConfirm }: Props) {
   const [snapshot, setSnapshot] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [opening, setOpening] = useState(true);
+  const [verifying, setVerifying] = useState(false);
 
   async function openCamera() {
     setError("");
@@ -68,10 +70,31 @@ export function TaskProofCamera({ taskTitle, onCancel, onConfirm }: Props) {
     setError("");
   }
 
-  function confirm() {
-    stopCamera();
-    setSnapshot(null);
-    onConfirm();
+  async function confirm() {
+    if (!snapshot || verifying) return;
+    if (!supabase) {
+      setError("Sign in and connect Supabase before using AI verification.");
+      return;
+    }
+    setVerifying(true);
+    setError("");
+    try {
+      const { data, error: verifyError } = await supabase.functions.invoke("verify-task-start", {
+        body: { taskTitle, imageData: snapshot }
+      });
+      if (verifyError) throw verifyError;
+      if (data?.approved !== true) {
+        setError(typeof data?.reason === "string" ? data.reason : "The photo did not show a clear starting setup. Retake it and try again.");
+        return;
+      }
+      stopCamera();
+      setSnapshot(null);
+      onConfirm();
+    } catch {
+      setError("AI verification is unavailable. Your alarm is still on. Please try again.");
+    } finally {
+      setVerifying(false);
+    }
   }
 
   return (
@@ -84,7 +107,7 @@ export function TaskProofCamera({ taskTitle, onCancel, onConfirm }: Props) {
         <p className="eyebrow">START TASK CHECK</p>
         <h3>Show yourself starting</h3>
         <p className="proof-task">{taskTitle}</p>
-        <p className="proof-description">Take a quick photo of your workspace as you get ready to begin. It stays in temporary memory only — it is not saved to your gallery or uploaded.</p>
+        <p className="proof-description">Take a quick photo of your workspace as you get ready to begin. The photo is sent to Gemini for a temporary AI check, but is not saved to your gallery or your app database.</p>
         <div className="proof-preview">
           {snapshot ? <img src={snapshot} alt="Temporary task-start photo preview" /> : <video ref={videoRef} autoPlay muted playsInline />}
           {opening && !snapshot && <span className="proof-camera-status">Opening camera…</span>}
@@ -94,13 +117,13 @@ export function TaskProofCamera({ taskTitle, onCancel, onConfirm }: Props) {
           {snapshot ? (
             <>
               <button type="button" className="outline" onClick={() => void openCamera()}><RefreshCw size={15} /> Retake</button>
-              <button type="button" className="primary" onClick={confirm}><Check size={15} /> I’m starting</button>
+              <button type="button" className="primary" onClick={() => void confirm()} disabled={verifying}><ShieldCheck size={15} /> {verifying ? "Checking photo…" : "Verify & start"}</button>
             </>
           ) : (
             <button type="button" className="primary" disabled={opening || !!error} onClick={capture}><Camera size={15} /> Capture photo</button>
           )}
         </div>
-        <p className="proof-privacy">No gallery file · no upload · task is not marked done</p>
+        <p className="proof-privacy">Temporary Gemini check · not saved to your gallery or app database · task stays incomplete</p>
       </div>
     </div>
   );
