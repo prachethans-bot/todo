@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
-import { Bell, Check, ChevronDown, Clock3, Pause, Play, RotateCcw, SkipForward, Square } from "lucide-react";
+import { Bell, ChevronDown, Clock3, Pause, Play, SkipForward, Square } from "lucide-react";
 
 type PlanStep = { id: string; title: string; minutes: number; kind: "work" | "break" };
 type Status = "ready" | "running" | "paused" | "stopped" | "finished";
@@ -62,6 +62,15 @@ export function TimedPlanBuilder() {
     const id = window.setInterval(() => setNow(Date.now()), 500);
     return () => window.clearInterval(id);
   }, [status]);
+
+  useEffect(() => {
+    if (status !== "running" || remainingMs > 0) return;
+    if (current >= steps.length - 1) {
+      stopSchedules(); setStatus("finished"); setNotice("Plan complete. You made it through the steps.");
+    } else {
+      setCurrent(value => value + 1); setStartedAt(Date.now()); setPausedMs(0); setNow(Date.now());
+    }
+  }, [status, remainingMs, current, steps.length]);
 
   useEffect(() => () => {
     browserTimers.current.forEach(window.clearTimeout);
