@@ -22,6 +22,7 @@ import {
 } from "./lib/notifications";
 import { ClockPicker } from "./components/ClockPicker";
 import { CountdownRing } from "./components/CountdownRing";
+import { TimedPlanBuilder } from "./components/TimedPlanBuilder";
 
 const modes: { id: TaskMode; label: string }[] = [
   { id: "NEW_TASK", label: "New task" },
@@ -748,6 +749,8 @@ export default function App() {
           </p>
         )}
       </section>
+
+      <TimedPlanBuilder />
 
       {/* Tasks Section with 'Right now' Card and Task List */}
       <section className="tasks-section">
