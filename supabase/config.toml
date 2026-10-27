@@ -1,0 +1,4 @@
+project_id = "todo-for-adhd"
+
+[functions.stepwise-assistant]
+verify_jwt = true
