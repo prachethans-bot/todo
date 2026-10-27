@@ -14,6 +14,16 @@ Todo for ADHD helps users begin overwhelming work with one tiny, concrete action
 - Supabase Edge Function for authenticated AI requests. If no OpenAI key is configured, it returns a safe built-in response.
 - SQL migration for the user-owned tasks table and RLS policies.
 
+## Deploy to Vercel
+
+1. Import this GitHub repository into Vercel.
+2. Keep the framework preset as **Vite** and the build command as `npm run build`.
+3. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables only if you have configured your own Supabase project.
+4. Deploy. Then add your deployed domain to the Supabase Auth redirect URL allowlist.
+5. Set `OPENAI_API_KEY` only in Supabase Edge Function secrets, never in Vercel `VITE_*` variables.
+
+A Vercel configuration file supplies SPA fallback and baseline security headers.
+
 ## Run locally
 
 1. Install Node.js LTS.
