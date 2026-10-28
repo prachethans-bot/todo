@@ -1527,36 +1527,6 @@ footer b {
 }
 
 
-/* Private, in-memory task-start camera */
-.proof-overlay { position:fixed; inset:0; z-index:1000; display:grid; place-items:center; padding:16px; background:rgba(0,0,0,.82); backdrop-filter:blur(8px); }
-.proof-card { width:min(100%,480px); max-height:92dvh; overflow:auto; padding:20px; border:1px solid #3a4935; border-radius:18px; background:#121612; box-shadow:0 24px 90px #000a; }
-.proof-head { display:flex; align-items:center; justify-content:space-between; }
-.proof-icon { display:grid; place-items:center; width:38px; height:38px; border-radius:12px; color:var(--green); background:#a7ef7918; }
-.proof-card h3 { margin:8px 0; font:700 22px Manrope,sans-serif; }
-.proof-task { color:var(--green); font-size:13px; font-weight:700; overflow-wrap:anywhere; }
-.proof-description { color:#a5afa4; font-size:11px; line-height:1.65; }
-.proof-preview { position:relative; overflow:hidden; width:100%; aspect-ratio:4/3; display:grid; place-items:center; margin:14px 0; border-radius:13px; background:#050605; border:1px solid #2b352b; }
-.proof-preview video,.proof-preview img { display:block; width:100%; height:100%; object-fit:cover; }
-.proof-camera-status { position:absolute; padding:8px 12px; border-radius:8px; background:#101510e8; color:#dbe4d7; font-size:12px; }
-.proof-error { color:#ffc2b8; font-size:11px; line-height:1.5; }
-.proof-controls { margin-top:12px; }
-.proof-controls button { flex:1; min-height:44px; }
-.proof-privacy { text-align:center; margin:12px 0 0; color:#7f8a80; font-size:9px; }
-
-
-/* Essay alternative for task-start verification */
-.proof-method-switch { display:flex; flex-direction:column; align-items:stretch; gap:9px; margin-top:18px; padding-top:15px; border-top:1px solid #293329; }
-.proof-method-switch > span { color:#9da99b; font-size:10px; text-align:center; }
-.proof-method-switch .outline { justify-content:center; min-height:40px; width:100%; border-color:#526746; color:#d7e4d1; }
-.proof-essay { margin-top:10px; }
-.proof-essay label { margin:0 0 8px; font-size:9px; line-height:1.5; letter-spacing:1px; }
-.proof-essay textarea { width:100%; min-height:130px; margin:0; resize:vertical; background:#0b0e0b; border:1px solid #344133; border-radius:11px; padding:12px; color:#eef2eb; font-size:12px; line-height:1.65; }
-.proof-essay textarea:focus { border-color:#8dcf68; outline:none; box-shadow:0 0 0 3px #a7ef7910; }
-.proof-word-count { margin-top:7px; text-align:right; font-size:10px; color:#8f9b8d; font-variant-numeric:tabular-nums; }
-.proof-word-count.over-limit { color:#ffc2b8; }
-.proof-essay .proof-description { margin:10px 0; }
-.proof-essay .proof-controls { margin-top:12px; }
-
 /* ADHD-friendly rewards and focus session */
 .reward-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px;margin:10px 0 18px;border:1px solid #dce3d9;border-radius:18px;background:rgba(255,255,255,.8)}
 .reward-summary>div{display:flex;flex-direction:column;gap:4px}.reward-summary small{font-size:10px;letter-spacing:.08em;opacity:.7}.reward-summary strong{font-size:24px}.reward-summary span{font-size:11px;opacity:.75}
