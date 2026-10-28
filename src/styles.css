@@ -1548,3 +1548,5 @@ footer b {
 .done-button.confetti-burst::before,.done-button.confetti-burst::after{content:"";position:absolute;inset:-12px;border-radius:50%;pointer-events:none;background:radial-gradient(circle at 15% 20%,#e5b95c 0 2px,transparent 3px),radial-gradient(circle at 85% 20%,#86b96c 0 2px,transparent 3px),radial-gradient(circle at 25% 85%,#d98d75 0 2px,transparent 3px),radial-gradient(circle at 75% 80%,#8bb9cb 0 2px,transparent 3px);animation:checkbox-burst .65s ease-out both}
 .done-button.confetti-burst::after{transform:rotate(35deg);animation-delay:.03s}
 @keyframes checkbox-burst{0%{opacity:1;transform:scale(.35)}75%{opacity:.9}100%{opacity:0;transform:scale(1.9)}}
+
+.focused-badge{display:inline-flex;align-items:center;margin-left:7px;padding:3px 7px;border-radius:999px;background:#e5efe0;color:#315b36;font-size:10px;font-weight:700;vertical-align:middle}
