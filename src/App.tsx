@@ -916,6 +916,7 @@ export default function App() {
                       size="small"
                     />
                   )}
+                  {!item.completed && <button type="button" className="outline task-focus-start" onClick={() => beginFocus(item)}>Start focus</button>}
                   {!item.completed && (
                     <details className="time-feedback">
                       <summary>How long did it take?</summary>
@@ -963,6 +964,23 @@ export default function App() {
         )}
       </section>
 
+
+      {rewardToast && <div className="reward-toast" role="status">{rewardToast}</div>}
+      {undoTask && <button type="button" className="undo-toast" onClick={undoCompletion}>Task completed - Undo</button>}
+      {activeFocusTask && (
+        <div className="focus-overlay" role="dialog" aria-modal="true" aria-label="Focus session">
+          <div className="focus-view">
+            <p className="eyebrow">FOCUS SESSION</p>
+            <h2>{activeFocusTask.title}</h2>
+            <p>{activeFocusTask.microStep}</p>
+            <div className="focus-clock">{String(Math.floor(focusRemaining / 60)).padStart(2, "0")}:{String(focusRemaining % 60).padStart(2, "0")}</div>
+            <div className="focus-presets">{[10, 15, 25, 45].map((mins) => <button type="button" key={mins} className={focusMinutes === mins ? "selected" : ""} onClick={() => { if (focusElapsed === 0) { setFocusMinutes(mins); setFocusRemaining(mins * 60); } }}>{mins} min</button>)}</div>
+            {checkInOpen && <div className="checkin-card"><h3>Still on it?</h3><button className="primary" onClick={() => respondToCheckIn(true)}>Yes</button><button className="outline" onClick={() => respondToCheckIn(false)}>Need a break</button></div>}
+            {focusRemaining === 0 && <p>Focus session complete. Nice work.</p>}
+            <div className="focus-actions"><button className="outline" onClick={() => setFocusPaused((paused) => !paused)}>{focusPaused ? "Continue" : "Pause"}</button><button className="primary" onClick={() => { setRewardToast("Focus session complete. Nice work."); endFocus(); }}>End session</button><button className="outline" onClick={endFocus}>Close</button></div>
+          </div>
+        </div>
+      )}
 
       {/* Clock Picker Modal Bottom Sheet */}
       <ClockPicker
