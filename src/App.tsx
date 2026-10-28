@@ -103,6 +103,24 @@ export default function App() {
   const alarmLoop = useRef<ReturnType<typeof setInterval> | null>(null);
   const alarmAudio = useRef<AudioContext | null>(null);
   const [ringingAlarm, setRingingAlarm] = useState<{ title: string; taskId?: string } | null>(null);
+  const [points, setPoints] = useState(() => Number(localStorage.getItem("todo-adhd.points") || 0));
+  const [streak, setStreak] = useState(() => Number(localStorage.getItem("todo-adhd.streak") || 0));
+  const [lastCompletionDay, setLastCompletionDay] = useState(() => localStorage.getItem("todo-adhd.lastDay") || "");
+  const [rewardToast, setRewardToast] = useState("");
+  const [undoTask, setUndoTask] = useState<SavedTask | null>(null);
+  const [rewardSettings, setRewardSettings] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("todo-adhd.rewardSettings") || '{"sound":true,"haptics":true,"animations":true}'); }
+    catch { return { sound: true, haptics: true, animations: true }; }
+  });
+  const [showSettings, setShowSettings] = useState(false);
+  const [focusTaskId, setFocusTaskId] = useState<string | null>(null);
+  const [focusMinutes, setFocusMinutes] = useState(25);
+  const [focusRemaining, setFocusRemaining] = useState(1500);
+  const [focusPaused, setFocusPaused] = useState(false);
+  const [focusElapsed, setFocusElapsed] = useState(0);
+  const [checkInOpen, setCheckInOpen] = useState(false);
+  const [checkInFrequency, setCheckInFrequency] = useState(10);
+
   // Always-current task list for native listeners / async handlers (avoids stale closures overwriting saved tasks)
   const tasksRef = useRef<SavedTask[]>(tasks);
   tasksRef.current = tasks;
