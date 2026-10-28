@@ -193,7 +193,7 @@ export default function App() {
       void LocalNotifications.addListener("localNotificationActionPerformed", (action) => {
         const taskId = action.notification.extra?.taskId;
         if (!taskId) return;
-        // Notification actions can reopen the alarm, but cannot bypass camera proof.
+        // Notification actions reopen the alarm so it can be dismissed.
         ringAlarm(action.notification.body || action.notification.title, taskId);
       }).then((sub) => {
         actionSub = sub;
@@ -271,7 +271,7 @@ export default function App() {
     if (target) void toggleDone(target);
   }
 
-  function beginTaskWithProof(item?: SavedTask) {
+  function startTaskFromAlarm(item?: SavedTask) {
     const target = item ?? (ringingAlarm?.taskId
       ? tasksRef.current.find((t) => t.id === ringingAlarm.taskId)
       : tasksRef.current.find((t) => t.title === ringingAlarm?.title));
@@ -288,9 +288,6 @@ export default function App() {
     setNotice("Alarm stopped. You can start working whenever you are ready.");
   }
 
-  async function confirmTaskStarted() {
-    setProofTask(null);
-  }
   async function handleAlarmSnooze(taskId?: string) {
     stopAlarmSound();
     if (taskId) {
@@ -614,7 +611,7 @@ export default function App() {
             <small>{ringingAlarm.title}</small>
           </span>
           <div className="alarm-banner-actions">
-            <button className="primary alarm-dismiss" onClick={() => beginTaskWithProof()}>
+            <button className="primary alarm-dismiss" onClick={() => startTaskFromAlarm()}>
               Start task <ArrowRight size={15} />
             </button>
           </div>
@@ -873,7 +870,7 @@ export default function App() {
               <button
                 type="button"
                 className="primary right-now-done-btn"
-                onClick={() => beginTaskWithProof(rightNowTask)}
+                onClick={() => startTaskFromAlarm(rightNowTask)}
               >
                 Start task <ArrowRight size={15} />
               </button>
