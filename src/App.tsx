@@ -108,6 +108,7 @@ export default function App() {
   const [lastCompletionDay, setLastCompletionDay] = useState(() => localStorage.getItem("todo-adhd.lastDay") || "");
   const [rewardToast, setRewardToast] = useState("");
   const [undoTask, setUndoTask] = useState<SavedTask | null>(null);
+  const [burstTaskId, setBurstTaskId] = useState<string | null>(null);
   const [rewardSettings, setRewardSettings] = useState(() => {
     try { return JSON.parse(localStorage.getItem("todo-adhd.rewardSettings") || '{"sound":true,"haptics":true,"animations":true}'); }
     catch { return { sound: true, haptics: true, animations: true }; }
@@ -491,6 +492,8 @@ export default function App() {
           osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.17);
         } catch {}
       }
+      setBurstTaskId(item.id);
+      window.setTimeout(() => setBurstTaskId((current) => current === item.id ? null : current), 800);
       setUndoTask(item);
       window.setTimeout(() => setUndoTask((current) => current?.id === item.id ? null : current), 5000);
       if (focusTaskId === item.id) setFocusTaskId(null);
@@ -897,7 +900,7 @@ export default function App() {
                 key={item.id}
               >
                 <button
-                  className="done-button"
+                  className={"done-button" + (burstTaskId === item.id ? " confetti-burst" : "")}
                   aria-label={item.completed ? "Mark as not done" : "Mark as complete"}
                   onClick={() => void toggleDone(item)}
                 >
