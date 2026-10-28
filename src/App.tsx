@@ -463,17 +463,74 @@ export default function App() {
   }
 
   async function toggleDone(item: SavedTask) {
-    const updated = {
-      ...item,
-      completed: !item.completed
-    };
+    const nowDone = !item.completed;
+    const updated = { ...item, completed: nowDone };
+    // Update UI and play reward feedback before awaiting persistence.
     setTasks((current) => current.map((t) => (t.id === item.id ? updated : t)));
-    if (updated.completed) {
-      await cancelReminder(item.id);
-    } else if (item.reminderAt && new Date(item.reminderAt).getTime() > Date.now()) {
-      await scheduleReminder(item.id, item.title, new Date(item.reminderAt), false);
+    if (nowDone) {
+      const today = new Date().toLocaleDateString("en-CA");
+      const yd = new Date(); yd.setDate(yd.getDate() - 1);
+      const yesterday = yd.toLocaleDateString("en-CA");
+      const nextStreak = lastCompletionDay === today ? streak : lastCompletionDay === yesterday ? streak + 1 : 1;
+      setStreak(nextStreak); setLastCompletionDay(today);
+      localStorage.setItem("todo-adhd.streak", String(nextStreak));
+      localStorage.setItem("todo-adhd.lastDay", today);
+      const bonus = Math.random() < 0.2;
+      const reward = focusTaskId === item.id ? 15 : 10;
+      const nextPoints = points + reward + (bonus ? 25 : 0);
+      setPoints(nextPoints); localStorage.setItem("todo-adhd.points", String(nextPoints));
+      if (rewardSettings.animations) setRewardToast(bonus ? "+25 bonus! You are on fire!" : "+" + reward + " points");
+      window.setTimeout(() => setRewardToast(""), 1800);
+      if (rewardSettings.haptics && "vibrate" in navigator) navigator.vibrate?.(bonus ? [25, 35, 25] : 18);
+      if (rewardSettings.sound) {
+        try {
+          const ctx = alarmAudio.current ?? new AudioContext(); alarmAudio.current = ctx;
+          if (ctx.state === "suspended") void ctx.resume();
+          const osc = ctx.createOscillator(); const gain = ctx.createGain();
+          osc.type = "sine"; osc.frequency.setValueAtTime(bonus ? 880 : 660, ctx.currentTime);
+          gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.06, ctx.currentTime + 0.015);
+          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.16);
+          osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.17);
+        } catch {}
+      }
+      setUndoTask(item);
+      window.setTimeout(() => setUndoTask((current) => current?.id === item.id ? null : current), 5000);
+      if (focusTaskId === item.id) setFocusTaskId(null);
+      void (async () => { await cancelReminder(item.id); await persistTask(updated); })();
+    } else {
+      setUndoTask(null);
+      if (item.reminderAt && new Date(item.reminderAt).getTime() > Date.now()) void scheduleReminder(item.id, item.title, new Date(item.reminderAt), false);
+      void persistTask(updated);
     }
-    await persistTask(updated);
+  }
+
+  function undoCompletion() {
+    if (!undoTask) return;
+    const restored = { ...undoTask, completed: false };
+    setTasks((current) => current.map((t) => t.id === restored.id ? restored : t));
+    setUndoTask(null);
+    setPoints((current) => { const next = Math.max(0, current - 10); localStorage.setItem("todo-adhd.points", String(next)); return next; });
+    void persistTask(restored);
+  }
+
+  function beginFocus(item: SavedTask) {
+    if (item.completed) return;
+    stopAlarmSound(); setFocusTaskId(item.id); setFocusMinutes(25); setFocusRemaining(1500);
+    setFocusElapsed(0); setFocusPaused(false); setCheckInOpen(false);
+  }
+
+  function updateRewardSetting(key: string, value: unknown) {
+    setRewardSettings((current: Record<string, unknown>) => {
+      const next = { ...current, [key]: value };
+      localStorage.setItem("todo-adhd.rewardSettings", JSON.stringify(next));
+      return next;
+    });
+  }
+
+  function respondToCheckIn(continueSession: boolean) {
+    setCheckInOpen(false);
+    if (!continueSession) setFocusPaused(true);
   }
 
   async function deleteTask(id: string) {
@@ -503,6 +560,24 @@ export default function App() {
   }
 
   const completedCount = tasks.filter((t) => t.completed).length;
+  const activeFocusTask = tasks.find((t) => t.id === focusTaskId) ?? null;
+
+  useEffect(() => {
+    if (!focusTaskId || focusPaused || checkInOpen || focusRemaining <= 0) return;
+    const tick = window.setInterval(() => {
+      setFocusRemaining((remaining) => {
+        if (remaining <= 1) { setFocusPaused(true); setRewardToast("Focus session complete — nice work!"); return 0; }
+        return remaining - 1;
+      });
+      setFocusElapsed((elapsed) => {
+        const next = elapsed + 1;
+        if (next > 0 && next % (checkInFrequency * 60) === 0) setCheckInOpen(true);
+        return next;
+      });
+    }, 1000);
+    return () => window.clearInterval(tick);
+  }, [focusTaskId, focusPaused, checkInOpen, focusRemaining, checkInFrequency]);
+
   const remainingCount = tasks.filter((t) => !t.completed).length;
   const rightNowTask = tasks.find((t) => !t.completed && t.reminderAt) || tasks.find((t) => !t.completed);
 
