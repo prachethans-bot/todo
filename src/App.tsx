@@ -23,7 +23,6 @@ import {
 import { ClockPicker } from "./components/ClockPicker";
 import { CountdownRing } from "./components/CountdownRing";
 import { TimedPlanBuilder } from "./components/TimedPlanBuilder";
-import { TaskProofCamera } from "./components/TaskProofCamera";
 
 function formatTime12(time24: string): string {
   const [hStr, mStr] = time24.split(":");
@@ -104,7 +103,6 @@ export default function App() {
   const alarmLoop = useRef<ReturnType<typeof setInterval> | null>(null);
   const alarmAudio = useRef<AudioContext | null>(null);
   const [ringingAlarm, setRingingAlarm] = useState<{ title: string; taskId?: string } | null>(null);
-  const [proofTask, setProofTask] = useState<SavedTask | null>(null);
   // Always-current task list for native listeners / async handlers (avoids stale closures overwriting saved tasks)
   const tasksRef = useRef<SavedTask[]>(tasks);
   tasksRef.current = tasks;
@@ -250,11 +248,9 @@ export default function App() {
   }
 
   async function handleAlarmDone(taskId?: string) {
-    // Legacy notification action: never mark a task complete without the camera flow.
-    if (taskId) {
-      const target = tasksRef.current.find((t) => t.id === taskId);
-      if (target) setProofTask(target);
-    }
+    if (!taskId) return;
+    const target = tasksRef.current.find((t) => t.id === taskId);
+    if (target) void toggleDone(target);
   }
 
   function beginTaskWithProof(item?: SavedTask) {
@@ -262,24 +258,21 @@ export default function App() {
       ? tasksRef.current.find((t) => t.id === ringingAlarm.taskId)
       : tasksRef.current.find((t) => t.title === ringingAlarm?.title));
     if (!target) {
-      setNotice("Save this task first, then start it with a quick camera check.");
+      stopAlarmSound();
+      setNotice("Save this task first, then start it from your task list.");
       return;
     }
-    setProofTask(target);
+    stopAlarmSound();
+    void cancelReminder(target.id);
+    const updated = { ...target, reminderAt: null, reminderTime: null };
+    setTasks((current) => current.map((t) => t.id === target.id ? updated : t));
+    void persistTask(updated);
+    setNotice("Alarm stopped. You can start working whenever you are ready.");
   }
 
   async function confirmTaskStarted() {
-    const item = proofTask;
-    if (!item) return;
-    stopAlarmSound();
-    await cancelReminder(item.id);
-    const updated = { ...item, reminderAt: null, reminderTime: null };
-    setTasks((current) => current.map((t) => t.id === item.id ? updated : t));
-    await persistTask(updated);
     setProofTask(null);
-    setNotice("Gemini approved your starting setup. Alarm stopped — now start your task. It is not marked done.");
   }
-
   async function handleAlarmSnooze(taskId?: string) {
     stopAlarmSound();
     if (taskId) {
@@ -865,7 +858,6 @@ export default function App() {
         )}
       </section>
 
-      {proofTask && <TaskProofCamera taskTitle={proofTask.title} onCancel={() => setProofTask(null)} onConfirm={() => void confirmTaskStarted()} />}
 
       {/* Clock Picker Modal Bottom Sheet */}
       <ClockPicker
