@@ -674,6 +674,18 @@ export default function App() {
 
       {/* Workspace Section */}
       <section id="workspace" className="workspace">
+        <div className="reward-summary">
+          <div><small>YOUR POINTS</small><strong>{points}</strong></div>
+          <div><small>DAILY STREAK</small><strong>🔥 {streak}</strong><span>{lastCompletionDay === new Date().toLocaleDateString("en-CA") ? "Today counts" : "Fresh start today"}</span></div>
+          <button className="outline" type="button" onClick={() => setShowSettings((open) => !open)}>Settings</button>
+        </div>
+        {showSettings && <section className="panel reward-settings">
+          <h3>Comfort settings</h3>
+          <label><input type="checkbox" checked={!!rewardSettings.sound} onChange={(e) => updateRewardSetting("sound", e.target.checked)} /> Reward sounds</label>
+          <label><input type="checkbox" checked={!!rewardSettings.haptics} onChange={(e) => updateRewardSetting("haptics", e.target.checked)} /> Haptic feedback</label>
+          <label><input type="checkbox" checked={!!rewardSettings.animations} onChange={(e) => updateRewardSetting("animations", e.target.checked)} /> Reward animations</label>
+          <label>Check-in frequency <select value={String(checkInFrequency)} onChange={(e) => setCheckInFrequency(Number(e.target.value))}><option value="5">5 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option></select></label>
+        </section>}
         <div className="section-head">
           <div>
             <p className="eyebrow">YOUR RUNWAY</p>
