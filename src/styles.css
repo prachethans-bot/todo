@@ -1543,3 +1543,8 @@ footer b {
 .focus-presets button{border:1px solid #d4dcd4;background:#f8faf6;border-radius:999px;padding:9px 13px}.focus-presets button.selected{background:#203c31;color:#fff}
 .checkin-card{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px;border-radius:18px;background:#f0f5ed}.checkin-card h3{grid-column:1/-1;margin:0}
 @media(prefers-reduced-motion:reduce){.reward-toast{animation:none}}
+
+.done-button{position:relative;overflow:visible}
+.done-button.confetti-burst::before,.done-button.confetti-burst::after{content:"";position:absolute;inset:-12px;border-radius:50%;pointer-events:none;background:radial-gradient(circle at 15% 20%,#e5b95c 0 2px,transparent 3px),radial-gradient(circle at 85% 20%,#86b96c 0 2px,transparent 3px),radial-gradient(circle at 25% 85%,#d98d75 0 2px,transparent 3px),radial-gradient(circle at 75% 80%,#8bb9cb 0 2px,transparent 3px);animation:checkbox-burst .65s ease-out both}
+.done-button.confetti-burst::after{transform:rotate(35deg);animation-delay:.03s}
+@keyframes checkbox-burst{0%{opacity:1;transform:scale(.35)}75%{opacity:.9}100%{opacity:0;transform:scale(1.9)}}
