@@ -2,6 +2,3 @@ project_id = "todo-for-adhd"
 
 [functions.stepwise-assistant]
 verify_jwt = true
-
-[functions.verify-task-start]
-verify_jwt = true
