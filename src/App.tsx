@@ -119,6 +119,9 @@ export default function App() {
   const [focusRemaining, setFocusRemaining] = useState(1500);
   const [focusPaused, setFocusPaused] = useState(false);
   const [focusElapsed, setFocusElapsed] = useState(0);
+  const [focusQualified, setFocusQualified] = useState(false);
+  const [focusedTasks, setFocusedTasks] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem("todo-adhd.focusedTasks") || "[]"); } catch { return []; } });
+  const [lastReward, setLastReward] = useState<{taskId:string; points:number; bonus:number} | null>(null);
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [checkInFrequency, setCheckInFrequency] = useState(10);
 
@@ -474,8 +477,16 @@ export default function App() {
       localStorage.setItem("todo-adhd.streak", String(nextStreak));
       localStorage.setItem("todo-adhd.lastDay", today);
       const bonus = Math.random() < 0.2;
-      const reward = focusTaskId === item.id ? 15 : 10;
-      const nextPoints = points + reward + (bonus ? 25 : 0);
+      const focused = focusTaskId === item.id && focusQualified;
+      const reward = focused ? 15 : 10;
+      const bonusPoints = bonus ? 25 : 0;
+      const nextPoints = points + reward + bonusPoints;
+      setLastReward({ taskId: item.id, points: reward, bonus: bonusPoints });
+      if (focused) {
+        const nextFocused = Array.from(new Set([...focusedTasks, item.id]));
+        setFocusedTasks(nextFocused);
+        localStorage.setItem("todo-adhd.focusedTasks", JSON.stringify(nextFocused));
+      }
       setPoints(nextPoints); localStorage.setItem("todo-adhd.points", String(nextPoints));
       if (rewardSettings.animations) setRewardToast(bonus ? "+25 bonus! You are on fire!" : "+" + reward + " points");
       window.setTimeout(() => setRewardToast(""), 1800);
@@ -510,14 +521,18 @@ export default function App() {
     const restored = { ...undoTask, completed: false };
     setTasks((current) => current.map((t) => t.id === restored.id ? restored : t));
     setUndoTask(null);
-    setPoints((current) => { const next = Math.max(0, current - 10); localStorage.setItem("todo-adhd.points", String(next)); return next; });
+    const removePoints = lastReward?.taskId === restored.id ? lastReward.points + lastReward.bonus : 10;
+    setPoints((current) => { const next = Math.max(0, current - removePoints); localStorage.setItem("todo-adhd.points", String(next)); return next; });
+    const nextFocused = focusedTasks.filter((id) => id !== restored.id);
+    setFocusedTasks(nextFocused); localStorage.setItem("todo-adhd.focusedTasks", JSON.stringify(nextFocused));
+    setLastReward(null);
     void persistTask(restored);
   }
 
   function beginFocus(item: SavedTask) {
     if (item.completed) return;
     stopAlarmSound(); setFocusTaskId(item.id); setFocusMinutes(25); setFocusRemaining(1500);
-    setFocusElapsed(0); setFocusPaused(false); setCheckInOpen(false);
+    setFocusElapsed(0); setFocusQualified(false); setFocusPaused(false); setCheckInOpen(false);
   }
 
   function endFocus() {
@@ -536,7 +551,8 @@ export default function App() {
 
   function respondToCheckIn(continueSession: boolean) {
     setCheckInOpen(false);
-    if (!continueSession) setFocusPaused(true);
+    if (continueSession) setFocusQualified(true);
+    else setFocusPaused(true);
   }
 
   async function deleteTask(id: string) {
@@ -572,7 +588,7 @@ export default function App() {
     if (!focusTaskId || focusPaused || checkInOpen || focusRemaining <= 0) return;
     const tick = window.setInterval(() => {
       setFocusRemaining((remaining) => {
-        if (remaining <= 1) { setFocusPaused(true); setRewardToast("Focus session complete — nice work!"); return 0; }
+        if (remaining <= 1) { setFocusPaused(true); setFocusQualified(true); setRewardToast("Focus session complete — nice work!"); return 0; }
         return remaining - 1;
       });
       setFocusElapsed((elapsed) => {
@@ -896,7 +912,7 @@ export default function App() {
           <div className="task-list">
             {tasks.map((item) => (
               <article
-                className={item.completed ? "saved-task is-done" : "saved-task"}
+                className={(item.completed ? "saved-task is-done" : "saved-task") + (focusedTasks.includes(item.id) ? " is-focused" : "")}
                 key={item.id}
               >
                 <button
@@ -907,7 +923,7 @@ export default function App() {
                   {item.completed ? <CheckCircle2 size={21} /> : <span />}
                 </button>
                 <div className="saved-task-copy">
-                  <b>{item.title}</b>
+                  <b>{item.title} {focusedTasks.includes(item.id) && <span className="focused-badge">Focused</span>}</b>
                   <p>{item.microStep}</p>
                   <small>
                     {new Date(item.createdAt).toLocaleDateString()} ·{" "}
