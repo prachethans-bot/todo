@@ -517,6 +517,12 @@ export default function App() {
     setFocusElapsed(0); setFocusPaused(false); setCheckInOpen(false);
   }
 
+  function endFocus() {
+    setFocusTaskId(null);
+    setFocusPaused(false);
+    setCheckInOpen(false);
+  }
+
   function updateRewardSetting(key: string, value: unknown) {
     setRewardSettings((current: Record<string, unknown>) => {
       const next = { ...current, [key]: value };
