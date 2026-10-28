@@ -23,7 +23,6 @@ import {
 import { ClockPicker } from "./components/ClockPicker";
 import { CountdownRing } from "./components/CountdownRing";
 import { TimedPlanBuilder } from "./components/TimedPlanBuilder";
-import { TaskProofCamera } from "./components/TaskProofCamera";
 
 function formatTime12(time24: string): string {
   const [hStr, mStr] = time24.split(":");
@@ -104,7 +103,24 @@ export default function App() {
   const alarmLoop = useRef<ReturnType<typeof setInterval> | null>(null);
   const alarmAudio = useRef<AudioContext | null>(null);
   const [ringingAlarm, setRingingAlarm] = useState<{ title: string; taskId?: string } | null>(null);
-  const [proofTask, setProofTask] = useState<SavedTask | null>(null);
+  const [points, setPoints] = useState(() => Number(localStorage.getItem("todo-adhd.points") || 0));
+  const [streak, setStreak] = useState(() => Number(localStorage.getItem("todo-adhd.streak") || 0));
+  const [lastCompletionDay, setLastCompletionDay] = useState(() => localStorage.getItem("todo-adhd.lastDay") || "");
+  const [rewardToast, setRewardToast] = useState("");
+  const [undoTask, setUndoTask] = useState<SavedTask | null>(null);
+  const [rewardSettings, setRewardSettings] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("todo-adhd.rewardSettings") || '{"sound":true,"haptics":true,"animations":true}'); }
+    catch { return { sound: true, haptics: true, animations: true }; }
+  });
+  const [showSettings, setShowSettings] = useState(false);
+  const [focusTaskId, setFocusTaskId] = useState<string | null>(null);
+  const [focusMinutes, setFocusMinutes] = useState(25);
+  const [focusRemaining, setFocusRemaining] = useState(1500);
+  const [focusPaused, setFocusPaused] = useState(false);
+  const [focusElapsed, setFocusElapsed] = useState(0);
+  const [checkInOpen, setCheckInOpen] = useState(false);
+  const [checkInFrequency, setCheckInFrequency] = useState(10);
+
   // Always-current task list for native listeners / async handlers (avoids stale closures overwriting saved tasks)
   const tasksRef = useRef<SavedTask[]>(tasks);
   tasksRef.current = tasks;
@@ -177,7 +193,7 @@ export default function App() {
       void LocalNotifications.addListener("localNotificationActionPerformed", (action) => {
         const taskId = action.notification.extra?.taskId;
         if (!taskId) return;
-        // Notification actions can reopen the alarm, but cannot bypass camera proof.
+        // Notification actions reopen the alarm so it can be dismissed.
         ringAlarm(action.notification.body || action.notification.title, taskId);
       }).then((sub) => {
         actionSub = sub;
@@ -250,34 +266,26 @@ export default function App() {
   }
 
   async function handleAlarmDone(taskId?: string) {
-    // Legacy notification action: never mark a task complete without the camera flow.
-    if (taskId) {
-      const target = tasksRef.current.find((t) => t.id === taskId);
-      if (target) setProofTask(target);
-    }
+    if (!taskId) return;
+    const target = tasksRef.current.find((t) => t.id === taskId);
+    if (target) void toggleDone(target);
   }
 
-  function beginTaskWithProof(item?: SavedTask) {
+  function startTaskFromAlarm(item?: SavedTask) {
     const target = item ?? (ringingAlarm?.taskId
       ? tasksRef.current.find((t) => t.id === ringingAlarm.taskId)
       : tasksRef.current.find((t) => t.title === ringingAlarm?.title));
     if (!target) {
-      setNotice("Save this task first, then start it with a quick camera check.");
+      stopAlarmSound();
+      setNotice("Save this task first, then start it from your task list.");
       return;
     }
-    setProofTask(target);
-  }
-
-  async function confirmTaskStarted() {
-    const item = proofTask;
-    if (!item) return;
     stopAlarmSound();
-    await cancelReminder(item.id);
-    const updated = { ...item, reminderAt: null, reminderTime: null };
-    setTasks((current) => current.map((t) => t.id === item.id ? updated : t));
-    await persistTask(updated);
-    setProofTask(null);
-    setNotice("Gemini approved your starting setup. Alarm stopped — now start your task. It is not marked done.");
+    void cancelReminder(target.id);
+    const updated = { ...target, reminderAt: null, reminderTime: null };
+    setTasks((current) => current.map((t) => t.id === target.id ? updated : t));
+    void persistTask(updated);
+    setNotice("Alarm stopped. You can start working whenever you are ready.");
   }
 
   async function handleAlarmSnooze(taskId?: string) {
@@ -452,17 +460,74 @@ export default function App() {
   }
 
   async function toggleDone(item: SavedTask) {
-    const updated = {
-      ...item,
-      completed: !item.completed
-    };
+    const nowDone = !item.completed;
+    const updated = { ...item, completed: nowDone };
+    // Update UI and play reward feedback before awaiting persistence.
     setTasks((current) => current.map((t) => (t.id === item.id ? updated : t)));
-    if (updated.completed) {
-      await cancelReminder(item.id);
-    } else if (item.reminderAt && new Date(item.reminderAt).getTime() > Date.now()) {
-      await scheduleReminder(item.id, item.title, new Date(item.reminderAt), false);
+    if (nowDone) {
+      const today = new Date().toLocaleDateString("en-CA");
+      const yd = new Date(); yd.setDate(yd.getDate() - 1);
+      const yesterday = yd.toLocaleDateString("en-CA");
+      const nextStreak = lastCompletionDay === today ? streak : lastCompletionDay === yesterday ? streak + 1 : 1;
+      setStreak(nextStreak); setLastCompletionDay(today);
+      localStorage.setItem("todo-adhd.streak", String(nextStreak));
+      localStorage.setItem("todo-adhd.lastDay", today);
+      const bonus = Math.random() < 0.2;
+      const reward = focusTaskId === item.id ? 15 : 10;
+      const nextPoints = points + reward + (bonus ? 25 : 0);
+      setPoints(nextPoints); localStorage.setItem("todo-adhd.points", String(nextPoints));
+      if (rewardSettings.animations) setRewardToast(bonus ? "+25 bonus! You are on fire!" : "+" + reward + " points");
+      window.setTimeout(() => setRewardToast(""), 1800);
+      if (rewardSettings.haptics && "vibrate" in navigator) navigator.vibrate?.(bonus ? [25, 35, 25] : 18);
+      if (rewardSettings.sound) {
+        try {
+          const ctx = alarmAudio.current ?? new AudioContext(); alarmAudio.current = ctx;
+          if (ctx.state === "suspended") void ctx.resume();
+          const osc = ctx.createOscillator(); const gain = ctx.createGain();
+          osc.type = "sine"; osc.frequency.setValueAtTime(bonus ? 880 : 660, ctx.currentTime);
+          gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.06, ctx.currentTime + 0.015);
+          gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.16);
+          osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.17);
+        } catch {}
+      }
+      setUndoTask(item);
+      window.setTimeout(() => setUndoTask((current) => current?.id === item.id ? null : current), 5000);
+      if (focusTaskId === item.id) setFocusTaskId(null);
+      void (async () => { await cancelReminder(item.id); await persistTask(updated); })();
+    } else {
+      setUndoTask(null);
+      if (item.reminderAt && new Date(item.reminderAt).getTime() > Date.now()) void scheduleReminder(item.id, item.title, new Date(item.reminderAt), false);
+      void persistTask(updated);
     }
-    await persistTask(updated);
+  }
+
+  function undoCompletion() {
+    if (!undoTask) return;
+    const restored = { ...undoTask, completed: false };
+    setTasks((current) => current.map((t) => t.id === restored.id ? restored : t));
+    setUndoTask(null);
+    setPoints((current) => { const next = Math.max(0, current - 10); localStorage.setItem("todo-adhd.points", String(next)); return next; });
+    void persistTask(restored);
+  }
+
+  function beginFocus(item: SavedTask) {
+    if (item.completed) return;
+    stopAlarmSound(); setFocusTaskId(item.id); setFocusMinutes(25); setFocusRemaining(1500);
+    setFocusElapsed(0); setFocusPaused(false); setCheckInOpen(false);
+  }
+
+  function updateRewardSetting(key: string, value: unknown) {
+    setRewardSettings((current: Record<string, unknown>) => {
+      const next = { ...current, [key]: value };
+      localStorage.setItem("todo-adhd.rewardSettings", JSON.stringify(next));
+      return next;
+    });
+  }
+
+  function respondToCheckIn(continueSession: boolean) {
+    setCheckInOpen(false);
+    if (!continueSession) setFocusPaused(true);
   }
 
   async function deleteTask(id: string) {
@@ -492,6 +557,24 @@ export default function App() {
   }
 
   const completedCount = tasks.filter((t) => t.completed).length;
+  const activeFocusTask = tasks.find((t) => t.id === focusTaskId) ?? null;
+
+  useEffect(() => {
+    if (!focusTaskId || focusPaused || checkInOpen || focusRemaining <= 0) return;
+    const tick = window.setInterval(() => {
+      setFocusRemaining((remaining) => {
+        if (remaining <= 1) { setFocusPaused(true); setRewardToast("Focus session complete — nice work!"); return 0; }
+        return remaining - 1;
+      });
+      setFocusElapsed((elapsed) => {
+        const next = elapsed + 1;
+        if (next > 0 && next % (checkInFrequency * 60) === 0) setCheckInOpen(true);
+        return next;
+      });
+    }, 1000);
+    return () => window.clearInterval(tick);
+  }, [focusTaskId, focusPaused, checkInOpen, focusRemaining, checkInFrequency]);
+
   const remainingCount = tasks.filter((t) => !t.completed).length;
   const rightNowTask = tasks.find((t) => !t.completed && t.reminderAt) || tasks.find((t) => !t.completed);
 
@@ -528,7 +611,7 @@ export default function App() {
             <small>{ringingAlarm.title}</small>
           </span>
           <div className="alarm-banner-actions">
-            <button className="primary alarm-dismiss" onClick={() => beginTaskWithProof()}>
+            <button className="primary alarm-dismiss" onClick={() => startTaskFromAlarm()}>
               Start task <ArrowRight size={15} />
             </button>
           </div>
@@ -588,6 +671,18 @@ export default function App() {
 
       {/* Workspace Section */}
       <section id="workspace" className="workspace">
+        <div className="reward-summary">
+          <div><small>YOUR POINTS</small><strong>{points}</strong></div>
+          <div><small>DAILY STREAK</small><strong>🔥 {streak}</strong><span>{lastCompletionDay === new Date().toLocaleDateString("en-CA") ? "Today counts" : "Fresh start today"}</span></div>
+          <button className="outline" type="button" onClick={() => setShowSettings((open) => !open)}>Settings</button>
+        </div>
+        {showSettings && <section className="panel reward-settings">
+          <h3>Comfort settings</h3>
+          <label><input type="checkbox" checked={!!rewardSettings.sound} onChange={(e) => updateRewardSetting("sound", e.target.checked)} /> Reward sounds</label>
+          <label><input type="checkbox" checked={!!rewardSettings.haptics} onChange={(e) => updateRewardSetting("haptics", e.target.checked)} /> Haptic feedback</label>
+          <label><input type="checkbox" checked={!!rewardSettings.animations} onChange={(e) => updateRewardSetting("animations", e.target.checked)} /> Reward animations</label>
+          <label>Check-in frequency <select value={String(checkInFrequency)} onChange={(e) => setCheckInFrequency(Number(e.target.value))}><option value="5">5 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option></select></label>
+        </section>}
         <div className="section-head">
           <div>
             <p className="eyebrow">YOUR RUNWAY</p>
@@ -775,7 +870,7 @@ export default function App() {
               <button
                 type="button"
                 className="primary right-now-done-btn"
-                onClick={() => beginTaskWithProof(rightNowTask)}
+                onClick={() => startTaskFromAlarm(rightNowTask)}
               >
                 Start task <ArrowRight size={15} />
               </button>
@@ -818,6 +913,7 @@ export default function App() {
                       size="small"
                     />
                   )}
+                  {!item.completed && <button type="button" className="outline task-focus-start" onClick={() => beginFocus(item)}>Start focus</button>}
                   {!item.completed && (
                     <details className="time-feedback">
                       <summary>How long did it take?</summary>
@@ -865,7 +961,23 @@ export default function App() {
         )}
       </section>
 
-      {proofTask && <TaskProofCamera taskTitle={proofTask.title} onCancel={() => setProofTask(null)} onConfirm={() => void confirmTaskStarted()} />}
+
+      {rewardToast && <div className="reward-toast" role="status">{rewardToast}</div>}
+      {undoTask && <button type="button" className="undo-toast" onClick={undoCompletion}>Task completed - Undo</button>}
+      {activeFocusTask && (
+        <div className="focus-overlay" role="dialog" aria-modal="true" aria-label="Focus session">
+          <div className="focus-view">
+            <p className="eyebrow">FOCUS SESSION</p>
+            <h2>{activeFocusTask.title}</h2>
+            <p>{activeFocusTask.microStep}</p>
+            <div className="focus-clock">{String(Math.floor(focusRemaining / 60)).padStart(2, "0")}:{String(focusRemaining % 60).padStart(2, "0")}</div>
+            <div className="focus-presets">{[10, 15, 25, 45].map((mins) => <button type="button" key={mins} className={focusMinutes === mins ? "selected" : ""} onClick={() => { if (focusElapsed === 0) { setFocusMinutes(mins); setFocusRemaining(mins * 60); } }}>{mins} min</button>)}</div>
+            {checkInOpen && <div className="checkin-card"><h3>Still on it?</h3><button className="primary" onClick={() => respondToCheckIn(true)}>Yes</button><button className="outline" onClick={() => respondToCheckIn(false)}>Need a break</button></div>}
+            {focusRemaining === 0 && <p>Focus session complete. Nice work.</p>}
+            <div className="focus-actions"><button className="outline" onClick={() => setFocusPaused((paused) => !paused)}>{focusPaused ? "Continue" : "Pause"}</button><button className="primary" onClick={() => { setRewardToast("Focus session complete. Nice work."); endFocus(); }}>End session</button><button className="outline" onClick={endFocus}>Close</button></div>
+          </div>
+        </div>
+      )}
 
       {/* Clock Picker Modal Bottom Sheet */}
       <ClockPicker
