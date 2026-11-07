@@ -123,6 +123,8 @@ export default function App() {
   const [focusedTasks, setFocusedTasks] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem("todo-adhd.focusedTasks") || "[]"); } catch { return []; } });
   const [lastReward, setLastReward] = useState<{taskId:string; points:number; bonus:number} | null>(null);
   const [checkInOpen, setCheckInOpen] = useState(false);
+  const [checkInExpired, setCheckInExpired] = useState(false);
+  const checkInTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [checkInFrequency, setCheckInFrequency] = useState(10);
 
   // Always-current task list for native listeners / async handlers (avoids stale closures overwriting saved tasks)
@@ -536,9 +538,12 @@ export default function App() {
   }
 
   function endFocus() {
+    if (checkInTimeout.current) clearTimeout(checkInTimeout.current);
+    checkInTimeout.current = null;
     setFocusTaskId(null);
     setFocusPaused(false);
     setCheckInOpen(false);
+    setCheckInExpired(false);
   }
 
   function updateRewardSetting(key: string, value: unknown) {
@@ -550,7 +555,10 @@ export default function App() {
   }
 
   function respondToCheckIn(continueSession: boolean) {
+    if (checkInTimeout.current) clearTimeout(checkInTimeout.current);
+    checkInTimeout.current = null;
     setCheckInOpen(false);
+    setCheckInExpired(false);
     if (continueSession) setFocusQualified(true);
     else setFocusPaused(true);
   }
@@ -599,6 +607,21 @@ export default function App() {
     }, 1000);
     return () => window.clearInterval(tick);
   }, [focusTaskId, focusPaused, checkInOpen, focusRemaining, checkInFrequency]);
+
+  useEffect(() => {
+    if (!checkInOpen) return;
+    if (checkInTimeout.current) clearTimeout(checkInTimeout.current);
+    checkInTimeout.current = window.setTimeout(() => {
+      setCheckInOpen(false);
+      setFocusPaused(true);
+      setCheckInExpired(true);
+      checkInTimeout.current = null;
+    }, 120000);
+    return () => {
+      if (checkInTimeout.current) clearTimeout(checkInTimeout.current);
+      checkInTimeout.current = null;
+    };
+  }, [checkInOpen]);
 
   const remainingCount = tasks.filter((t) => !t.completed).length;
   const rightNowTask = tasks.find((t) => !t.completed && t.reminderAt) || tasks.find((t) => !t.completed);
@@ -998,6 +1021,7 @@ export default function App() {
             <div className="focus-clock">{String(Math.floor(focusRemaining / 60)).padStart(2, "0")}:{String(focusRemaining % 60).padStart(2, "0")}</div>
             <div className="focus-presets">{[10, 15, 25, 45].map((mins) => <button type="button" key={mins} className={focusMinutes === mins ? "selected" : ""} onClick={() => { if (focusElapsed === 0) { setFocusMinutes(mins); setFocusRemaining(mins * 60); } }}>{mins} min</button>)}</div>
             {checkInOpen && <div className="checkin-card"><h3>Still on it?</h3><button className="primary" onClick={() => respondToCheckIn(true)}>Yes</button><button className="outline" onClick={() => respondToCheckIn(false)}>Need a break</button></div>}
+            {checkInExpired && <div className="checkin-card"><h3>Welcome back, want to continue?</h3><button className="primary" onClick={() => { setCheckInExpired(false); setFocusPaused(false); }}>Continue</button><button className="outline" onClick={() => { setCheckInExpired(false); setFocusPaused(true); }}>Take a break</button></div>}
             {focusRemaining === 0 && <p>Focus session complete. Nice work.</p>}
             <div className="focus-actions"><button className="outline" onClick={() => setFocusPaused((paused) => !paused)}>{focusPaused ? "Continue" : "Pause"}</button><button className="primary" onClick={() => { setRewardToast("Focus session complete. Nice work."); endFocus(); }}>End session</button><button className="outline" onClick={endFocus}>Close</button></div>
           </div>
