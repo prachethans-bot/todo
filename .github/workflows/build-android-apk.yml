@@ -78,6 +78,7 @@ jobs:
           sha256sum "$APK"
           ls -lh "$APK"
 
+
       - name: Install and launch APK on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
