@@ -40,7 +40,7 @@ jobs:
           cache: gradle
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build web app
         run: npm run build
@@ -54,6 +54,23 @@ jobs:
       - name: Build debug APK
         working-directory: android
         run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+
+      - name: Verify installable APK and permissions
+        working-directory: android
+        run: |
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          unzip -t "$APK" >/dev/null
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          test -n "$AAPT"
+          "$AAPT" dump permissions "$APK" > /tmp/todo-apk-permissions.txt
+          if grep -q "android.permission.CAMERA" /tmp/todo-apk-permissions.txt; then
+            cat /tmp/todo-apk-permissions.txt
+            echo "Unexpected camera permission found in APK"
+            exit 1
+          fi
+          sha256sum "$APK"
+          ls -lh "$APK"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
