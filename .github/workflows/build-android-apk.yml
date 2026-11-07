@@ -1,4 +1,4 @@
-name: Build Todo AI Android APK
+name: Build VINAI Android APK
 
 on:
   workflow_dispatch:
@@ -53,29 +53,46 @@ jobs:
 
       - name: Build debug APK
         working-directory: android
-        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon
+        run: chmod +x gradlew && ./gradlew clean assembleDebug --no-daemon
 
-      - name: Verify installable APK and permissions
+      - name: Verify APK package, signature, alignment, and permissions
         working-directory: android
         run: |
-          APK=app/build/outputs/apk/debug/app-debug.apk
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
           unzip -t "$APK" >/dev/null
-          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n 1)"
-          test -n "$AAPT"
-          "$AAPT" dump permissions "$APK" > /tmp/todo-apk-permissions.txt
-          if grep -q "android.permission.CAMERA" /tmp/todo-apk-permissions.txt; then
-            cat /tmp/todo-apk-permissions.txt
+          BUILD_TOOLS="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)"
+          test -n "$BUILD_TOOLS"
+          "$BUILD_TOOLS/zipalign" -c -v 4 "$APK"
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK" > /tmp/apksigner.txt
+          "$BUILD_TOOLS/aapt" dump badging "$APK" | tee /tmp/badging.txt
+          grep -q "name='com.todo.foradhd' versionCode='2' versionName='1.1'" /tmp/badging.txt
+          "$BUILD_TOOLS/aapt" dump permissions "$APK" > /tmp/permissions.txt
+          if grep -q "android.permission.CAMERA" /tmp/permissions.txt; then
+            cat /tmp/permissions.txt
             echo "Unexpected camera permission found in APK"
             exit 1
           fi
+          cat /tmp/apksigner.txt
           sha256sum "$APK"
           ls -lh "$APK"
 
-      - name: Upload APK
+      - name: Install and launch APK on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: Pixel_2
+          script: |
+            adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+            adb shell monkey -p com.todo.foradhd 1
+
+      - name: Upload verified APK
         uses: actions/upload-artifact@v4
         with:
-          name: todo-ai-debug-apk
+          name: vinai-android-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 14
