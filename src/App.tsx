@@ -124,7 +124,7 @@ export default function App() {
   const [lastReward, setLastReward] = useState<{taskId:string; points:number; bonus:number} | null>(null);
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [checkInExpired, setCheckInExpired] = useState(false);
-  const checkInTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const checkInTimeout = useRef<number | null>(null);
   const [checkInFrequency, setCheckInFrequency] = useState(10);
 
   // Always-current task list for native listeners / async handlers (avoids stale closures overwriting saved tasks)
