@@ -15,7 +15,7 @@ on:
       - ".github/workflows/android-apk.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   android:
@@ -31,6 +31,10 @@ jobs:
         run: npm install
       - name: Build web app
         run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_PUBLIC_URL: ${{ secrets.VITE_PUBLIC_URL }}
       - name: Generate Android project
         run: |
           if [ ! -d "android" ]; then
@@ -53,3 +57,15 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
+      - name: Create or update release
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        continue-on-error: true
+        with:
+          tag_name: latest
+          name: "Todo for ADHD — Android Mobile App"
+          body: |
+            ### 📱 Downloadable Mobile App (Android APK)
+            Download and install the mobile app directly on your Android phone.
+          files: android/app/build/outputs/apk/debug/app-debug.apk
+

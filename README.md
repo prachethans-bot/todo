@@ -154,3 +154,8 @@ npm run preview
 - Never expose service-role or AI provider keys in frontend code.
 - The Edge Function validates the caller with Supabase Auth before accepting a task.
 - Tasks may contain personal information. Avoid entering sensitive data and review privacy and retention practices before launch.
+
+## Accountability buddy setup
+1. Run `supabase/migrations/002_buddy.sql` in the Supabase SQL Editor.
+2. Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` and `VITE_PUBLIC_URL` (your deployed web URL, used in invite links). For the APK add them as GitHub repo secrets of the same names.
+3. Deploy the web build (e.g. Vercel) so friends can open `/?buddy=TOKEN` without installing the app.

@@ -1,6 +1,8 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import { BuddyView } from "./components/BuddyView";
+import { inviteTokenFromUrl } from "./lib/buddy";
 import "./styles.css";
 
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
@@ -12,5 +14,5 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
 }
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode><App /></React.StrictMode>
+  <React.StrictMode>{inviteTokenFromUrl() ? <BuddyView token={inviteTokenFromUrl()!} /> : <App />}</React.StrictMode>
 );

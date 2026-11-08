@@ -1528,7 +1528,7 @@ footer b {
 
 
 /* ADHD-friendly rewards and focus session */
-.reward-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px;margin:10px 0 18px;border:1px solid #dce3d9;border-radius:18px;background:rgba(255,255,255,.8)}
+.reward-summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:15px;margin:10px 0 18px;border:1px solid #6b4a1f;border-radius:18px;background:linear-gradient(135deg,#2b1c0d 0%,#1d1a0f 100%);color:#fff3df}
 .reward-summary>div{display:flex;flex-direction:column;gap:4px}.reward-summary small{font-size:10px;letter-spacing:.08em;opacity:.7}.reward-summary strong{font-size:24px}.reward-summary span{font-size:11px;opacity:.75}
 .reward-settings{display:grid;gap:12px;margin-bottom:18px}.reward-settings h3{margin:0}.reward-settings label{display:flex;align-items:center;gap:10px;justify-content:space-between}
 .task-focus-start{margin-top:8px}
@@ -1550,3 +1550,31 @@ footer b {
 @keyframes checkbox-burst{0%{opacity:1;transform:scale(.35)}75%{opacity:.9}100%{opacity:0;transform:scale(1.9)}}
 
 .focused-badge{display:inline-flex;align-items:center;margin-left:7px;padding:3px 7px;border-radius:999px;background:#e5efe0;color:#315b36;font-size:10px;font-weight:700;vertical-align:middle}
+
+/* Streak colours (warm flame instead of grey) */
+.reward-summary>div:nth-child(2) strong{color:#ffb347;text-shadow:0 0 18px #ff8a2a55}
+.reward-summary>div:nth-child(2) span{color:#ffd9a0;opacity:.9}
+.reward-summary small{color:#f3d9b0}
+.reward-settings label{display:flex;align-items:center;gap:8px;margin:8px 0}
+.reward-settings h3{margin:14px 0 6px}
+
+/* Accountability buddy */
+.buddy-note{font-size:13px;opacity:.8;margin:6px 0}
+.buddy-invite-form,.buddy-manage{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.buddy-invite-form input{flex:1;min-width:160px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:inherit}
+.share-toggle{display:flex;align-items:center;gap:6px;font-size:12px;opacity:.85;margin-top:6px}
+.cheer-float{position:fixed;left:50%;bottom:30%;z-index:1300;font-size:64px;pointer-events:none;transform:translateX(-50%);animation:cheer-rise 2.2s ease-out both}
+@keyframes cheer-rise{0%{opacity:0;transform:translate(-50%,20px) scale(.6)}20%{opacity:1}100%{opacity:0;transform:translate(-50%,-120px) scale(1.2)}}
+@media(prefers-reduced-motion:reduce){.cheer-float{animation:none;opacity:1}}
+.buddy-screen{min-height:100vh;display:grid;place-items:center;padding:20px;background:#0b0d0c;color:#eef2eb}
+.buddy-card{width:min(440px,100%);padding:28px 22px;border:1px solid var(--line);border-radius:22px;background:var(--panel);text-align:center;display:flex;flex-direction:column;gap:16px}
+.buddy-card h1{font-size:24px;line-height:1.25;margin:0}
+.buddy-brand{font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.6}
+.buddy-line{margin:0;opacity:.85}
+.buddy-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.buddy-status{display:inline-block;align-self:center;margin:0;padding:6px 14px;border-radius:999px;background:#1c2a1a;color:var(--green);font-weight:700}
+.buddy-status[data-activity="break"]{background:#2a2414;color:#ffd58a}
+.buddy-status[data-activity="done"]{background:#1a2a2a;color:#9fe6e6}
+.buddy-cheers{display:flex;gap:10px;justify-content:center}
+.buddy-cheers button{font-size:30px;width:64px;height:64px;border-radius:18px;border:1px solid var(--line);background:#101410;cursor:pointer}
+.buddy-cheers button:active{transform:scale(.94)}

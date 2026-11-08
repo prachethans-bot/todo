@@ -23,6 +23,18 @@ import {
 import { ClockPicker } from "./components/ClockPicker";
 import { CountdownRing } from "./components/CountdownRing";
 import { TimedPlanBuilder } from "./components/TimedPlanBuilder";
+import {
+  buddyAvailable,
+  buildInviteLink,
+  createInvite,
+  loadLocalBuddy,
+  pollOwner,
+  pushBuddyStatus,
+  saveLocalBuddy,
+  setBuddyState,
+  type BuddyActivity,
+  type LocalBuddy
+} from "./lib/buddy";
 
 function formatTime12(time24: string): string {
   const [hStr, mStr] = time24.split(":");
@@ -125,7 +137,35 @@ export default function App() {
   const [checkInOpen, setCheckInOpen] = useState(false);
   const [checkInExpired, setCheckInExpired] = useState(false);
   const checkInTimeout = useRef<number | null>(null);
-  const [checkInFrequency, setCheckInFrequency] = useState(10);
+  const [checkInFrequency, setCheckInFrequencyState] = useState(() => {
+    const saved = Number(localStorage.getItem("todo-adhd.checkInFrequency"));
+    return [5, 10, 15].includes(saved) ? saved : 10;
+  });
+  function setCheckInFrequency(value: number) {
+    setCheckInFrequencyState(value);
+    localStorage.setItem("todo-adhd.checkInFrequency", String(value));
+  }
+
+  // Accountability buddy
+  const [buddy, setBuddy] = useState<LocalBuddy | null>(() => loadLocalBuddy());
+  const buddyRef = useRef<LocalBuddy | null>(buddy);
+  buddyRef.current = buddy;
+  const [buddyName, setBuddyName] = useState(() => localStorage.getItem("todo-adhd.buddyOwnerName") || "");
+  const [buddyBusy, setBuddyBusy] = useState(false);
+  const [cheerFloat, setCheerFloat] = useState("");
+  const [sharedTasks, setSharedTasks] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("todo-adhd.sharedTasks") || "[]"); } catch { return []; }
+  });
+  const sharedTasksRef = useRef<string[]>(sharedTasks);
+  sharedTasksRef.current = sharedTasks;
+  const focusSessionId = useRef("");
+  const lastBuddyActivity = useRef<BuddyActivity>("idle");
+
+  // "Did you finish this one?" check (asked once per task)
+  const [tooFastTask, setTooFastTask] = useState<SavedTask | null>(null);
+  const [askedTooFast, setAskedTooFast] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("todo-adhd.askedTooFast") || "[]"); } catch { return []; }
+  });
 
   // Always-current task list for native listeners / async handlers (avoids stale closures overwriting saved tasks)
   const tasksRef = useRef<SavedTask[]>(tasks);
@@ -465,8 +505,18 @@ export default function App() {
     setReminderAt(null);
   }
 
-  async function toggleDone(item: SavedTask) {
+  async function toggleDone(item: SavedTask, skipCheck = false) {
     const nowDone = !item.completed;
+    if (nowDone && !skipCheck && focusTaskId !== item.id && item.estimateMinutes && !askedTooFast.includes(item.id)) {
+      const elapsedMs = Date.now() - new Date(item.createdAt).getTime();
+      if (elapsedMs < item.estimateMinutes * 60000 * 0.2) {
+        const next = [...askedTooFast, item.id];
+        setAskedTooFast(next);
+        localStorage.setItem("todo-adhd.askedTooFast", JSON.stringify(next));
+        setTooFastTask(item);
+        return;
+      }
+    }
     const updated = { ...item, completed: nowDone };
     // Update UI and play reward feedback before awaiting persistence.
     setTasks((current) => current.map((t) => (t.id === item.id ? updated : t)));
@@ -510,6 +560,7 @@ export default function App() {
       setUndoTask(item);
       window.setTimeout(() => setUndoTask((current) => current?.id === item.id ? null : current), 5000);
       if (focusTaskId === item.id) setFocusTaskId(null);
+      syncBuddy("", "done", "done-" + Date.now());
       void (async () => { await cancelReminder(item.id); await persistTask(updated); })();
     } else {
       setUndoTask(null);
@@ -533,6 +584,8 @@ export default function App() {
 
   function beginFocus(item: SavedTask) {
     if (item.completed) return;
+    focusSessionId.current = "focus-" + Date.now();
+    lastBuddyActivity.current = "idle";
     stopAlarmSound(); setFocusTaskId(item.id); setFocusMinutes(25); setFocusRemaining(1500);
     setFocusElapsed(0); setFocusQualified(false); setFocusPaused(false); setCheckInOpen(false);
   }
@@ -588,6 +641,120 @@ export default function App() {
     setActualInput("");
     setNotice("Time feedback saved. This is information, not a score.");
   }
+
+  function syncBuddy(label: string, activity: BuddyActivity, sessionId: string) {
+    const current = buddyRef.current;
+    if (!current || current.state === "removed") return;
+    lastBuddyActivity.current = activity;
+    void pushBuddyStatus(current, label, activity, sessionId);
+  }
+
+  function toggleShared(taskId: string, on: boolean) {
+    const next = on ? Array.from(new Set([...sharedTasks, taskId])) : sharedTasks.filter((id) => id !== taskId);
+    setSharedTasks(next);
+    localStorage.setItem("todo-adhd.sharedTasks", JSON.stringify(next));
+  }
+
+  async function inviteBuddy() {
+    const name = buddyName.trim();
+    if (!name) { setNotice("Add the name your buddy should see first."); return; }
+    setBuddyBusy(true);
+    localStorage.setItem("todo-adhd.buddyOwnerName", name);
+    const created = await createInvite(name);
+    setBuddyBusy(false);
+    if (!created) { setNotice("Couldn't create the invite right now. Try again in a moment."); return; }
+    setBuddy(created);
+    void shareInvite(created);
+  }
+
+  async function shareInvite(target: LocalBuddy | null = buddy) {
+    if (!target) return;
+    const link = buildInviteLink(target.token);
+    const text = target.ownerName + " invited you to be their buddy: " + link;
+    try {
+      if (navigator.share) { await navigator.share({ text }); return; }
+    } catch { /* fall through to copy */ }
+    try { await navigator.clipboard.writeText(link); setNotice("Invite link copied."); }
+    catch { setNotice(link); }
+  }
+
+  async function changeBuddySharing(state: "active" | "paused" | "removed") {
+    const current = buddyRef.current;
+    if (!current) return;
+    setBuddyBusy(true);
+    await setBuddyState(current, state);
+    setBuddyBusy(false);
+    if (state === "removed") { saveLocalBuddy(null); setBuddy(null); return; }
+    const next = { ...current, state };
+    saveLocalBuddy(next);
+    setBuddy(next);
+  }
+
+  // Poll for cheers and buddy acceptance (only while a buddy exists)
+  useEffect(() => {
+    if (!buddy) return;
+    let cancelled = false;
+    const poll = async () => {
+      const current = buddyRef.current;
+      if (!current) return;
+      const result = await pollOwner(current);
+      if (cancelled || !result) return;
+      const next: LocalBuddy = { ...current, state: result.state, lastCheerId: Math.max(current.lastCheerId, result.lastId) };
+      if (next.state !== current.state || next.lastCheerId !== current.lastCheerId) {
+        saveLocalBuddy(next);
+        setBuddy(next);
+      }
+      if (result.emojis.length > 0) {
+        const emoji = result.emojis[result.emojis.length - 1];
+        setRewardToast("Your buddy sent a cheer " + emoji);
+        window.setTimeout(() => setRewardToast(""), 2400);
+        if (rewardSettings.animations) {
+          setCheerFloat(emoji);
+          window.setTimeout(() => setCheerFloat(""), 2200);
+        }
+      }
+    };
+    void poll();
+    const timer = window.setInterval(() => void poll(), 8000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [buddy?.token, rewardSettings.animations]);
+
+  // Keep the buddy's view of the focus session current
+  useEffect(() => {
+    if (focusTaskId) {
+      const shared = sharedTasksRef.current.includes(focusTaskId);
+      const title = tasksRef.current.find((t) => t.id === focusTaskId)?.title ?? "";
+      syncBuddy(shared ? title : "Working on something", focusPaused ? "break" : "focusing", focusSessionId.current);
+    } else if (lastBuddyActivity.current === "focusing" || lastBuddyActivity.current === "break") {
+      syncBuddy("", "idle", "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusTaskId, focusPaused]);
+
+  // Gentle check-in notification + soft chime
+  useEffect(() => {
+    if (!checkInOpen) return;
+    const soundOn = rewardSettings.notifySound !== false;
+    if (soundOn) {
+      try {
+        const ctx = alarmAudio.current ?? new AudioContext(); alarmAudio.current = ctx;
+        if (ctx.state === "suspended") void ctx.resume();
+        const osc = ctx.createOscillator(); const gain = ctx.createGain();
+        osc.type = "sine"; osc.frequency.setValueAtTime(523, ctx.currentTime);
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.05, ctx.currentTime + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.5);
+        osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.52);
+      } catch { /* audio unavailable */ }
+    }
+    if (Capacitor.isNativePlatform()) {
+      void LocalNotifications.schedule({ notifications: [{ id: 91000001, title: "Still on it?", body: "A quick, no-pressure check-in.", schedule: { at: new Date(Date.now() + 400) }, ...(soundOn ? { sound: "default" } : {}) }] }).catch(() => undefined);
+    } else if ("Notification" in window && Notification.permission === "granted") {
+      try { new Notification("Still on it?", { body: "A quick, no-pressure check-in.", tag: "todo-adhd-checkin", silent: !soundOn }); } catch { /* ignore */ }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkInOpen]);
 
   const completedCount = tasks.filter((t) => t.completed).length;
   const activeFocusTask = tasks.find((t) => t.id === focusTaskId) ?? null;
@@ -730,6 +897,27 @@ export default function App() {
           <label><input type="checkbox" checked={!!rewardSettings.haptics} onChange={(e) => updateRewardSetting("haptics", e.target.checked)} /> Haptic feedback</label>
           <label><input type="checkbox" checked={!!rewardSettings.animations} onChange={(e) => updateRewardSetting("animations", e.target.checked)} /> Reward animations</label>
           <label>Check-in frequency <select value={String(checkInFrequency)} onChange={(e) => setCheckInFrequency(Number(e.target.value))}><option value="5">5 minutes</option><option value="10">10 minutes</option><option value="15">15 minutes</option></select></label>
+          <label><input type="checkbox" checked={rewardSettings.notifySound !== false} onChange={(e) => updateRewardSetting("notifySound", e.target.checked)} /> Check-in notification sounds</label>
+          <h3>Accountability buddy</h3>
+          {!buddyAvailable && <p className="buddy-note">Buddy sharing needs the cloud setup (Supabase) before it can be turned on.</p>}
+          {buddyAvailable && !buddy && (
+            <div className="buddy-invite-form">
+              <input type="text" maxLength={40} placeholder="Name your buddy will see" value={buddyName} onChange={(e) => setBuddyName(e.target.value)} />
+              <button type="button" className="primary" disabled={buddyBusy} onClick={() => void inviteBuddy()}>Invite a buddy</button>
+            </div>
+          )}
+          {buddyAvailable && buddy && (
+            <div className="buddy-manage">
+              <p className="buddy-note">
+                {buddy.state === "pending" ? "Invite sent. Waiting for your friend to accept." : buddy.state === "paused" ? "Sharing is paused." : "Your buddy is connected."}
+              </p>
+              {buddy.state === "pending" && <button type="button" className="outline" onClick={() => void shareInvite()}>Share invite link again</button>}
+              {buddy.state === "paused"
+                ? <button type="button" className="outline" disabled={buddyBusy} onClick={() => void changeBuddySharing("active")}>Resume sharing</button>
+                : <button type="button" className="outline" disabled={buddyBusy} onClick={() => void changeBuddySharing("paused")}>Pause sharing</button>}
+              <button type="button" className="outline" disabled={buddyBusy} onClick={() => void changeBuddySharing("removed")}>Remove buddy</button>
+            </div>
+          )}
         </section>}
         <div className="section-head">
           <div>
@@ -961,7 +1149,10 @@ export default function App() {
                       size="small"
                     />
                   )}
-                  {!item.completed && <button type="button" className="outline task-focus-start" onClick={() => beginFocus(item)}>Start focus</button>}
+                  {!item.completed && <button type="button" className="outline task-focus-start" onClick={() => beginFocus(item)}>Start</button>}
+                  {!item.completed && buddy && buddy.state !== "removed" && (
+                    <label className="share-toggle"><input type="checkbox" checked={sharedTasks.includes(item.id)} onChange={(e) => toggleShared(item.id, e.target.checked)} /> Share with buddy</label>
+                  )}
                   {!item.completed && (
                     <details className="time-feedback">
                       <summary>How long did it take?</summary>
@@ -1011,6 +1202,19 @@ export default function App() {
 
 
       {rewardToast && <div className="reward-toast" role="status">{rewardToast}</div>}
+      {cheerFloat && <div className="cheer-float" aria-hidden="true">{cheerFloat}</div>}
+      {tooFastTask && (
+        <div className="focus-overlay too-fast" role="dialog" aria-modal="true" aria-label="Did you finish this one?">
+          <div className="focus-view">
+            <h2>Did you finish this one?</h2>
+            <p>{tooFastTask.title}</p>
+            <div className="focus-actions">
+              <button className="primary" onClick={() => { const t = tooFastTask; setTooFastTask(null); void toggleDone(t, true); }}>Yes</button>
+              <button className="outline" onClick={() => setTooFastTask(null)}>Not yet</button>
+            </div>
+          </div>
+        </div>
+      )}
       {undoTask && <button type="button" className="undo-toast" onClick={undoCompletion}>Task completed - Undo</button>}
       {activeFocusTask && (
         <div className="focus-overlay" role="dialog" aria-modal="true" aria-label="Focus session">
