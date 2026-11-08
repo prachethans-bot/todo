@@ -23,6 +23,7 @@ import {
 import { ClockPicker } from "./components/ClockPicker";
 import { CountdownRing } from "./components/CountdownRing";
 import { TimedPlanBuilder } from "./components/TimedPlanBuilder";
+import { LoadingScreen } from "./components/LoadingScreen";
 import {
   buddyAvailable,
   buildInviteLink,
@@ -87,6 +88,7 @@ function fromDb(row: Record<string, unknown>): SavedTask {
 }
 
 export default function App() {
+  const [showLoading, setShowLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -274,9 +276,9 @@ export default function App() {
     setRingingAlarm({ title, taskId });
     if ("Notification" in window && Notification.permission === "granted") {
       try {
-        new Notification("Todo for ADHD · gentle alarm", {
+        new Notification("Vinai · gentle alarm", {
           body: title,
-          tag: "todo-adhd-alarm",
+          tag: "vinai-alarm",
           requireInteraction: true
         });
       } catch {
@@ -796,11 +798,10 @@ export default function App() {
   return (
     <main className="shell">
       <nav className="nav">
-        <a className="brand" href="#">
-          <span className="mark">
-            <Sparkles size={17} />
-          </span>
-          todo for ADHD
+        <a className="brand vinai-brand" href="#">
+          <img src="/vinai_launcher.png" alt="Vinai" className="brand-logo-img" />
+          <span className="brand-name">VINAI</span>
+          <span className="brand-tamil">வினை</span>
         </a>
         <div className="nav-actions">
           <span className="status">
@@ -836,7 +837,7 @@ export default function App() {
       {/* Hero Section */}
       <section className="hero">
         <div className="hero-copy">
-          <p className="eyebrow">ADHD TO DO</p>
+          <p className="eyebrow">VINAI</p>
           <h1>
             STAY<br />
             <span>HARD.</span>
@@ -1246,17 +1247,20 @@ export default function App() {
       />
 
       <footer>
-        <a className="brand" href="#">
-          <span className="mark">
-            <Sparkles size={14} />
-          </span>
-          todo for ADHD
+        <a className="brand vinai-brand" href="#">
+          <img src="/vinai_launcher.png" alt="Vinai" className="brand-logo-img small" />
+          <span className="brand-name">VINAI</span>
+          <span className="brand-tamil">வினை</span>
         </a>
         <span>Made for real brains, on real days.</span>
         <span>
           Progress over pressure <b>✳</b>
         </span>
       </footer>
+
+      {showLoading && (
+        <LoadingScreen onFinish={() => setShowLoading(false)} durationMs={2200} />
+      )}
     </main>
   );
 }

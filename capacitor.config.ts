@@ -2,7 +2,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
   appId: "com.todo.foradhd",
-  appName: "Todo for ADHD",
+  appName: "Vinai",
   webDir: "dist"
 };
 

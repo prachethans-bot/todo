@@ -1578,3 +1578,470 @@ footer b {
 .buddy-cheers{display:flex;gap:10px;justify-content:center}
 .buddy-cheers button{font-size:30px;width:64px;height:64px;border-radius:18px;border:1px solid var(--line);background:#101410;cursor:pointer}
 .buddy-cheers button:active{transform:scale(.94)}
+
+/* ==========================================================================
+   VINAI BRANDING & THEME ENHANCEMENTS
+   ========================================================================== */
+
+.vinai-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.brand-logo-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: #000000;
+  border: 1px solid rgba(167, 239, 121, 0.25);
+  object-fit: contain;
+  box-shadow: 0 0 14px rgba(167, 239, 121, 0.15);
+}
+
+.brand-logo-img.small {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+}
+
+.brand-name {
+  font-family: 'Manrope', sans-serif;
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: 1.5px;
+  color: #ffffff;
+}
+
+.brand-tamil {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--green);
+  opacity: 0.85;
+  letter-spacing: 0.5px;
+}
+
+/* ==========================================================================
+   VINAI 2.2s LOADING SCREEN (Figma Spec 3:561)
+   ========================================================================== */
+
+.vinai-loading-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  background: #0b0d0c;
+  color: #eef2eb;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 32px 36px;
+  overflow: hidden;
+  opacity: 1;
+  transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1), transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: auto;
+}
+
+.vinai-loading-screen.fading-out {
+  opacity: 0;
+  transform: scale(1.02);
+  pointer-events: none;
+}
+
+.vinai-loading-ambient-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(167, 239, 121, 0.08) 0%, rgba(20, 30, 20, 0.04) 45%, transparent 70%);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  filter: blur(40px);
+}
+
+/* Header */
+.vinai-loading-header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.vinai-loading-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vinai-loading-logo-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  background: rgba(167, 239, 121, 0.12);
+  border: 1px solid rgba(167, 239, 121, 0.35);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--green);
+  letter-spacing: 1px;
+}
+
+.vinai-loading-title {
+  font-family: 'Manrope', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: #ffffff;
+}
+
+.vinai-loading-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #929c92;
+}
+
+.vinai-loading-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 10px #a7ef79;
+}
+
+.vinai-loading-dot.pulse {
+  animation: vinai-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes vinai-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+/* Centerpiece */
+.vinai-loading-center {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  margin: auto;
+  max-width: 480px;
+  width: 100%;
+}
+
+.vinai-loading-art-wrap {
+  position: relative;
+  width: 108px;
+  height: 108px;
+  margin-bottom: 24px;
+  display: grid;
+  place-items: center;
+}
+
+.vinai-loading-halo {
+  position: absolute;
+  inset: -12px;
+  border-radius: 36px;
+  background: radial-gradient(circle, rgba(167, 239, 121, 0.22) 0%, rgba(167, 239, 121, 0.04) 60%, transparent 80%);
+  filter: blur(12px);
+  animation: vinai-breathe 2.4s ease-in-out infinite alternate;
+}
+
+@keyframes vinai-breathe {
+  0% { transform: scale(0.95); opacity: 0.6; }
+  100% { transform: scale(1.08); opacity: 1; }
+}
+
+.vinai-loading-symbol {
+  width: 92px;
+  height: 92px;
+  border-radius: 26px;
+  background: #000000;
+  border: 1.5px solid rgba(167, 239, 121, 0.35);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7), 0 0 24px rgba(167, 239, 121, 0.2);
+  object-fit: contain;
+  position: relative;
+  z-index: 1;
+}
+
+.vinai-loading-wordmark {
+  font-family: 'Manrope', sans-serif;
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: 5px;
+  margin: 0 0 8px;
+  background: linear-gradient(135deg, #ffffff 0%, #d8e0d4 50%, #a7ef79 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.vinai-loading-subtext {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 0 0 36px;
+}
+
+/* Progress Box */
+.vinai-loading-progress-box {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.vinai-loading-stage-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--green);
+  text-transform: uppercase;
+}
+
+.vinai-loading-bar-track {
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.vinai-loading-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6ee7b7 0%, #a7ef79 100%);
+  border-radius: 999px;
+  box-shadow: 0 0 12px #a7ef79aa;
+  transition: width 0.08s linear;
+}
+
+.vinai-loading-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #7b887b;
+}
+
+.vinai-loading-hint {
+  font-size: 11px;
+}
+
+.vinai-loading-pct {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: #eef2eb;
+}
+
+/* Footer */
+.vinai-loading-footer {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-size: 11px;
+  color: #637063;
+  letter-spacing: 0.5px;
+}
+
+.vinai-loading-footer-brand {
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+}
+
+.vinai-loading-system-ready {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+  color: #aab4aa;
+}
+
+/* ==========================================================================
+   UPDATED MOBILE UI ACCORDING TO FIGMA & SCREENSHOT (media_0.png)
+   ========================================================================== */
+
+/* Modernized reward summary card */
+.reward-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+  margin: 12px 0 20px;
+  border: 1px solid #4a341e;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #1c150e 0%, #13120f 100%);
+  color: #fff3df;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+.reward-summary .outline {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: #eef2eb;
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.reward-summary .outline:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Modernized Comfort Settings card */
+.reward-settings {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 22px;
+  padding: 22px 24px;
+  border-radius: 24px;
+  background: #141715;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.reward-settings h3 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 19px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 4px 0 8px;
+}
+
+.reward-settings label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  color: #e2e8df;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Custom electric-blue checkboxes matching media_0.png */
+.reward-settings input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  display: grid;
+  place-content: center;
+  transition: all 0.15s ease;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.reward-settings input[type="checkbox"]:checked {
+  background: #2563eb;
+  border-color: #2563eb;
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.4);
+}
+
+.reward-settings input[type="checkbox"]:checked::before {
+  content: "";
+  width: 9px;
+  height: 5px;
+  border-left: 2px solid #ffffff;
+  border-bottom: 2px solid #ffffff;
+  transform: rotate(-45deg) translate(1px, -1px);
+}
+
+.reward-settings select {
+  background: #1c201d;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  color: #eef2eb;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+}
+
+/* Runway section header */
+.section-head .eyebrow {
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin: 0 0 6px;
+}
+
+.section-head h2 {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #ffffff;
+  margin: 0;
+}
+
+/* Submit button matching media_0.png: Find my micro-step ➔ */
+.panel form button.primary {
+  border-radius: 999px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  background: var(--green);
+  color: #0b0d0c;
+  border: none;
+  box-shadow: 0 2px 16px rgba(167, 239, 121, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.panel form button.primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(167, 239, 121, 0.45);
+}
+
+.panel form button.primary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+@media (max-width: 620px) {
+  .vinai-loading-screen {
+    padding: 24px 20px;
+  }
+  .vinai-loading-wordmark {
+    font-size: 28px;
+    letter-spacing: 4px;
+  }
+  .reward-summary {
+    padding: 15px 18px;
+  }
+  .reward-settings {
+    padding: 18px 16px;
+  }
+}
+

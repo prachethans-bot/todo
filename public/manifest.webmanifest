@@ -1,7 +1,7 @@
 {
-  "name": "Todo for ADHD",
-  "short_name": "Todo ADHD",
-  "description": "A calmer way to start overwhelming tasks, one tiny step at a time.",
+  "name": "Vinai",
+  "short_name": "Vinai",
+  "description": "Vinai helps you turn overwhelming tasks into tiny, low-pressure next steps.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0b0d0c",

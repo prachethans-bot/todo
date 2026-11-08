@@ -53,7 +53,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: todo-for-adhd-android-debug
+          name: vinai-android-debug
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
@@ -63,9 +63,9 @@ jobs:
         continue-on-error: true
         with:
           tag_name: latest
-          name: "Todo for ADHD — Android Mobile App"
+          name: "Vinai — Android Mobile App"
           body: |
-            ### 📱 Downloadable Mobile App (Android APK)
-            Download and install the mobile app directly on your Android phone.
+            ### 📱 Vinai (வினை) — Production-Ready Downloadable Mobile App
+            Download and install the Vinai mobile app directly on your Android phone.
           files: android/app/build/outputs/apk/debug/app-debug.apk
 
