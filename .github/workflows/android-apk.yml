@@ -63,6 +63,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          CURRENT_MAIN_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
+          if [[ "$CURRENT_MAIN_SHA" != "$GITHUB_SHA" ]]; then
+            echo "Skipping release publication because this APK build is stale."
+            exit 0
+          fi
           APK="android/app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
           if ! gh release view latest >/dev/null 2>&1; then
