@@ -2052,3 +2052,7 @@ footer b {
 .focus-detail-fields label{display:grid;gap:7px;font-size:13px;font-weight:700;color:#26352b}
 .focus-detail-fields textarea{width:100%;min-height:76px;resize:vertical;padding:12px 14px;border:1px solid #d7dfd5;border-radius:14px;background:#f8faf7;color:#1c261e;font:inherit;font-weight:400;line-height:1.5;outline:none}
 .focus-detail-fields textarea:focus{border-color:#6d9a65;box-shadow:0 0 0 3px rgba(109,154,101,.14)}
+
+.checkbox-reward-float{position:absolute;left:50%;top:-8px;z-index:5;white-space:nowrap;pointer-events:none;color:#b6ed91;font-size:12px;font-weight:800;text-shadow:0 2px 8px #0008;animation:checkbox-reward-rise 1.35s ease-out both}
+@keyframes checkbox-reward-rise{0%{opacity:0;transform:translate(-50%,8px) scale(.85)}18%{opacity:1}100%{opacity:0;transform:translate(-50%,-42px) scale(1.05)}}
+.done-button.bonus-burst::before,.done-button.bonus-burst::after{inset:-18px;background:radial-gradient(circle at 8% 12%,#e5b95c 0 3px,transparent 4px),radial-gradient(circle at 92% 14%,#86b96c 0 3px,transparent 4px),radial-gradient(circle at 15% 88%,#d98d75 0 3px,transparent 4px),radial-gradient(circle at 88% 84%,#8bb9cb 0 3px,transparent 4px),radial-gradient(circle at 50% 0%,#f0d47a 0 2px,transparent 3px)}
