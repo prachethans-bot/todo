@@ -594,10 +594,10 @@ export default function App() {
       setUndoTask(item);
       window.setTimeout(() => setUndoTask((current) => current?.id === item.id ? null : current), 5000);
       if (focusTaskId === item.id) setFocusTaskId(null);
-      if (focusTaskId === item.id && sharedTasksRef.current.includes(item.id)) {
+      if (sharedTasksRef.current.includes(item.id)) {
         syncBuddy("", "done", "done-" + Date.now());
       } else {
-        // A private task or a task completed outside a shared focus session stays private.
+        // A private task never sends a completion event to the buddy.
         syncBuddy("", "idle", "");
       }
       void (async () => { await cancelReminder(item.id); await persistTask(updated); })();
@@ -630,6 +630,7 @@ export default function App() {
     setFocusedTasks(nextFocused); localStorage.setItem("todo-adhd.focusedTasks", JSON.stringify(nextFocused));
     setLastReward(null);
     setUndoStreakSnapshot(null);
+    syncBuddy("", "idle", "");
     void persistTask(restored);
   }
 
