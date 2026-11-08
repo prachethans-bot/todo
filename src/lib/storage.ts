@@ -13,6 +13,7 @@ export type SavedTask = {
   reminderAt: string | null;   // ISO string of next occurrence
   estimateMinutes: number | null;
   actualMinutes: number | null;
+  progressNote?: string;
 };
 
 export const getStorageKey = (userId?: string) =>
