@@ -214,7 +214,7 @@ try {
     const saved = JSON.parse(localStorage.getItem("todo-adhd.tasks.guest") || "[]");
     return saved[0]?.microStep === "Read the chapter heading and first section." &&
       saved[0]?.progressNote === "Opened the book and found the correct chapter.";
-  }, { timeout: 5000 });
+  }, null, { timeout: 5000 });
   await page.locator(".focus-actions button").filter({ hasText: "Close" }).click();
   await page.locator('.focus-overlay[aria-label="Focus session"]').waitFor({ state: "hidden", timeout: 5000 });
 
