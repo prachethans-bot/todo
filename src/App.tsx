@@ -223,7 +223,10 @@ export default function App() {
         const remote = data.map((row) => fromDb(row as Record<string, unknown>));
         setTasks((current) => {
           const byId = new Map(current.map((t) => [t.id, t]));
-          remote.forEach((t) => byId.set(t.id, t));
+          remote.forEach((t) => {
+          const local = byId.get(t.id);
+          byId.set(t.id, local?.progressNote && !t.progressNote ? { ...t, progressNote: local.progressNote } : t);
+        });
           return [...byId.values()].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 100);
         });
       }
@@ -593,7 +596,14 @@ export default function App() {
       }
       setUndoTask(item);
       window.setTimeout(() => setUndoTask((current) => current?.id === item.id ? null : current), 5000);
-      if (focusTaskId === item.id) setFocusTaskId(null);
+      if (focusTaskId === item.id) {
+        if (checkInTimeout.current) clearTimeout(checkInTimeout.current);
+        checkInTimeout.current = null;
+        setCheckInOpen(false);
+        setCheckInExpired(false);
+        setFocusPaused(false);
+        setFocusTaskId(null);
+      }
       if (sharedTasksRef.current.includes(item.id)) {
         syncBuddy("", "done", "done-" + Date.now());
       } else {
@@ -631,6 +641,9 @@ export default function App() {
     setLastReward(null);
     setUndoStreakSnapshot(null);
     syncBuddy("", "idle", "");
+    if (restored.reminderAt && new Date(restored.reminderAt).getTime() > Date.now()) {
+      void scheduleReminder(restored.id, restored.title, new Date(restored.reminderAt), false);
+    }
     void persistTask(restored);
   }
 
