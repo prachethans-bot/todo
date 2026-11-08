@@ -2056,3 +2056,5 @@ footer b {
 .checkbox-reward-float{position:absolute;left:50%;top:-8px;z-index:5;white-space:nowrap;pointer-events:none;color:#b6ed91;font-size:12px;font-weight:800;text-shadow:0 2px 8px #0008;animation:checkbox-reward-rise 1.35s ease-out both}
 @keyframes checkbox-reward-rise{0%{opacity:0;transform:translate(-50%,8px) scale(.85)}18%{opacity:1}100%{opacity:0;transform:translate(-50%,-42px) scale(1.05)}}
 .done-button.bonus-burst::before,.done-button.bonus-burst::after{inset:-18px;background:radial-gradient(circle at 8% 12%,#e5b95c 0 3px,transparent 4px),radial-gradient(circle at 92% 14%,#86b96c 0 3px,transparent 4px),radial-gradient(circle at 15% 88%,#d98d75 0 3px,transparent 4px),radial-gradient(circle at 88% 84%,#8bb9cb 0 3px,transparent 4px),radial-gradient(circle at 50% 0%,#f0d47a 0 2px,transparent 3px)}
+
+.focus-view{max-height:calc(100dvh - 40px);overflow-y:auto;overscroll-behavior:contain}
