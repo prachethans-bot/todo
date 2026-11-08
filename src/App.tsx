@@ -130,6 +130,7 @@ export default function App() {
     catch { return []; }
   });
   const [burstTaskId, setBurstTaskId] = useState<string | null>(null);
+  const [floatingReward, setFloatingReward] = useState<{ taskId: string; label: string } | null>(null);
   const [rewardSettings, setRewardSettings] = useState(() => {
     try { return JSON.parse(localStorage.getItem("todo-adhd.rewardSettings") || '{"sound":true,"haptics":true,"animations":true}'); }
     catch { return { sound: true, haptics: true, animations: true }; }
@@ -482,7 +483,19 @@ export default function App() {
 
   async function persistTask(item: SavedTask) {
     if (!session || !supabase) return;
-    const { error } = await supabase.from("tasks").upsert(toDb(item, session.user.id));
+    const payload = toDb(item, session.user.id);
+    const { error } = await supabase.from("tasks").upsert(payload);
+    if (error && /progress_note|column/i.test(error.message)) {
+      // Keep older Supabase projects syncing tasks until migration 003 is applied.
+      const { progress_note: _progressNote, ...legacyPayload } = payload;
+      const retry = await supabase.from("tasks").upsert(legacyPayload);
+      if (!retry.error) {
+        setNotice("Task synced. Apply migration 003 to sync focus notes to the cloud too.");
+        return;
+      }
+      setNotice("Saved on this device. Cloud sync needs setup: " + retry.error.message);
+      return;
+    }
     if (error) setNotice("Saved on this device. Cloud sync needs setup: " + error.message);
   }
 
@@ -555,7 +568,11 @@ export default function App() {
         localStorage.setItem("todo-adhd.qualifiedFocusTasks", JSON.stringify(nextQualified));
       }
       setPoints(nextPoints); localStorage.setItem("todo-adhd.points", String(nextPoints));
-      if (rewardSettings.animations) setRewardToast(bonus ? "+25 bonus! You are on fire!" : "+" + reward + " points");
+      if (rewardSettings.animations) {
+        setRewardToast(bonus ? "+25 bonus! You're on fire!" : "+" + reward + " points");
+        setFloatingReward({ taskId: item.id, label: "+" + reward + (bonus ? " · +25 bonus!" : "") });
+        window.setTimeout(() => setFloatingReward((current) => current?.taskId === item.id ? null : current), 1400);
+      }
       window.setTimeout(() => setRewardToast(""), 1800);
       if (rewardSettings.haptics && "vibrate" in navigator) navigator.vibrate?.(bonus ? [25, 35, 25] : 18);
       if (rewardSettings.sound) {
@@ -570,8 +587,10 @@ export default function App() {
           osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + 0.17);
         } catch {}
       }
-      setBurstTaskId(item.id);
-      window.setTimeout(() => setBurstTaskId((current) => current === item.id ? null : current), 800);
+      if (rewardSettings.animations) {
+        setBurstTaskId(item.id);
+        window.setTimeout(() => setBurstTaskId((current) => current === item.id ? null : current), 800);
+      }
       setUndoTask(item);
       window.setTimeout(() => setUndoTask((current) => current?.id === item.id ? null : current), 5000);
       if (focusTaskId === item.id) setFocusTaskId(null);
@@ -1182,11 +1201,12 @@ export default function App() {
                 key={item.id}
               >
                 <button
-                  className={"done-button" + (burstTaskId === item.id ? " confetti-burst" : "")}
+                  className={"done-button" + (burstTaskId === item.id ? " confetti-burst" : "") + (lastReward?.taskId === item.id && lastReward.bonus > 0 ? " bonus-burst" : "")}
                   aria-label={item.completed ? "Mark as not done" : "Mark as complete"}
                   onClick={() => void toggleDone(item)}
                 >
                   {item.completed ? <CheckCircle2 size={21} /> : <span />}
+                  {floatingReward?.taskId === item.id && <span className="checkbox-reward-float">{floatingReward.label}</span>}
                 </button>
                 <div className="saved-task-copy">
                   <b>{item.title} {focusedTasks.includes(item.id) && <span className="focused-badge">Focused</span>}</b>
