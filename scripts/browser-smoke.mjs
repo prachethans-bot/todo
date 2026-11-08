@@ -202,6 +202,22 @@ try {
     throw new Error(`Alarm should be scheduled in the future (today or tomorrow): ${stored[0].reminderAt}`);
   }
 
+  // 6. Focus session: editable task instructions and progress notes persist locally.
+  await page.locator(".task-focus-start").first().click();
+  await page.locator('.focus-overlay[aria-label="Focus session"]').waitFor({ state: "visible", timeout: 5000 });
+  const focusFields = page.locator(".focus-detail-fields textarea");
+  if (await focusFields.count() !== 2) throw new Error("Focus session should show two editable note fields");
+  await focusFields.nth(0).fill("Read the chapter heading and first section.");
+  await focusFields.nth(1).fill("Opened the book and found the correct chapter.");
+  await focusFields.nth(1).blur();
+  await page.waitForFunction(() => {
+    const saved = JSON.parse(localStorage.getItem("todo-adhd.tasks.guest") || "[]");
+    return saved[0]?.microStep === "Read the chapter heading and first section." &&
+      saved[0]?.progressNote === "Opened the book and found the correct chapter.";
+  }, { timeout: 5000 });
+  await page.locator(".focus-actions button").filter({ hasText: "Close" }).click();
+  await page.locator('.focus-overlay[aria-label="Focus session"]').waitFor({ state: "hidden", timeout: 5000 });
+
   if (await page.locator("#account").count()) {
     throw new Error("Removed account-creation section is still present");
   }
