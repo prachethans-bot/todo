@@ -771,8 +771,12 @@ export default function App() {
     const current = buddyRef.current;
     if (!current) return;
     setBuddyBusy(true);
-    await setBuddyState(current, state);
+    const saved = await setBuddyState(current, state);
     setBuddyBusy(false);
+    if (!saved) {
+      setNotice("Couldn't update buddy sharing right now. Your current setting is unchanged.");
+      return;
+    }
     if (state === "removed") { saveLocalBuddy(null); setBuddy(null); return; }
     const next = { ...current, state };
     saveLocalBuddy(next);
