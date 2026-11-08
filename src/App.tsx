@@ -58,7 +58,8 @@ function toDb(task: SavedTask, userId: string) {
     completed: task.completed,
     reminder_at: task.reminderAt,
     estimate_minutes: task.estimateMinutes,
-    actual_minutes: task.actualMinutes
+    actual_minutes: task.actualMinutes,
+    progress_note: task.progressNote ?? ""
   };
 }
 
@@ -83,7 +84,8 @@ function fromDb(row: Record<string, unknown>): SavedTask {
     reminderTime: reminderTimeStr,
     reminderAt: reminderAtStr,
     estimateMinutes: row.estimate_minutes == null ? null : Number(row.estimate_minutes),
-    actualMinutes: row.actual_minutes == null ? null : Number(row.actual_minutes)
+    actualMinutes: row.actual_minutes == null ? null : Number(row.actual_minutes),
+    progressNote: String(row.progress_note ?? "")
   };
 }
 
@@ -122,6 +124,11 @@ export default function App() {
   const [lastCompletionDay, setLastCompletionDay] = useState(() => localStorage.getItem("todo-adhd.lastDay") || "");
   const [rewardToast, setRewardToast] = useState("");
   const [undoTask, setUndoTask] = useState<SavedTask | null>(null);
+  const [undoStreakSnapshot, setUndoStreakSnapshot] = useState<{ streak: number; lastDay: string } | null>(null);
+  const [qualifiedFocusTasks, setQualifiedFocusTasks] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem("todo-adhd.qualifiedFocusTasks") || "[]"); }
+    catch { return []; }
+  });
   const [burstTaskId, setBurstTaskId] = useState<string | null>(null);
   const [rewardSettings, setRewardSettings] = useState(() => {
     try { return JSON.parse(localStorage.getItem("todo-adhd.rewardSettings") || '{"sound":true,"haptics":true,"animations":true}'); }
@@ -134,6 +141,8 @@ export default function App() {
   const [focusPaused, setFocusPaused] = useState(false);
   const [focusElapsed, setFocusElapsed] = useState(0);
   const [focusQualified, setFocusQualified] = useState(false);
+  const [focusMicroStep, setFocusMicroStep] = useState("");
+  const [focusProgressNote, setFocusProgressNote] = useState("");
   const [focusedTasks, setFocusedTasks] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem("todo-adhd.focusedTasks") || "[]"); } catch { return []; } });
   const [lastReward, setLastReward] = useState<{taskId:string; points:number; bonus:number} | null>(null);
   const [checkInOpen, setCheckInOpen] = useState(false);
@@ -526,12 +535,13 @@ export default function App() {
       const today = new Date().toLocaleDateString("en-CA");
       const yd = new Date(); yd.setDate(yd.getDate() - 1);
       const yesterday = yd.toLocaleDateString("en-CA");
+      setUndoStreakSnapshot({ streak, lastDay: lastCompletionDay });
       const nextStreak = lastCompletionDay === today ? streak : lastCompletionDay === yesterday ? streak + 1 : 1;
       setStreak(nextStreak); setLastCompletionDay(today);
       localStorage.setItem("todo-adhd.streak", String(nextStreak));
       localStorage.setItem("todo-adhd.lastDay", today);
       const bonus = Math.random() < 0.2;
-      const focused = focusTaskId === item.id && focusQualified;
+      const focused = (focusTaskId === item.id && focusQualified) || qualifiedFocusTasks.includes(item.id);
       const reward = focused ? 15 : 10;
       const bonusPoints = bonus ? 25 : 0;
       const nextPoints = points + reward + bonusPoints;
@@ -540,6 +550,9 @@ export default function App() {
         const nextFocused = Array.from(new Set([...focusedTasks, item.id]));
         setFocusedTasks(nextFocused);
         localStorage.setItem("todo-adhd.focusedTasks", JSON.stringify(nextFocused));
+        const nextQualified = qualifiedFocusTasks.filter((id) => id !== item.id);
+        setQualifiedFocusTasks(nextQualified);
+        localStorage.setItem("todo-adhd.qualifiedFocusTasks", JSON.stringify(nextQualified));
       }
       setPoints(nextPoints); localStorage.setItem("todo-adhd.points", String(nextPoints));
       if (rewardSettings.animations) setRewardToast(bonus ? "+25 bonus! You are on fire!" : "+" + reward + " points");
@@ -562,7 +575,12 @@ export default function App() {
       setUndoTask(item);
       window.setTimeout(() => setUndoTask((current) => current?.id === item.id ? null : current), 5000);
       if (focusTaskId === item.id) setFocusTaskId(null);
-      syncBuddy("", "done", "done-" + Date.now());
+      if (focusTaskId === item.id && sharedTasksRef.current.includes(item.id)) {
+        syncBuddy("", "done", "done-" + Date.now());
+      } else {
+        // A private task or a task completed outside a shared focus session stays private.
+        syncBuddy("", "idle", "");
+      }
       void (async () => { await cancelReminder(item.id); await persistTask(updated); })();
     } else {
       setUndoTask(null);
@@ -578,9 +596,21 @@ export default function App() {
     setUndoTask(null);
     const removePoints = lastReward?.taskId === restored.id ? lastReward.points + lastReward.bonus : 10;
     setPoints((current) => { const next = Math.max(0, current - removePoints); localStorage.setItem("todo-adhd.points", String(next)); return next; });
+    if (undoStreakSnapshot) {
+      setStreak(undoStreakSnapshot.streak);
+      setLastCompletionDay(undoStreakSnapshot.lastDay);
+      localStorage.setItem("todo-adhd.streak", String(undoStreakSnapshot.streak));
+      localStorage.setItem("todo-adhd.lastDay", undoStreakSnapshot.lastDay);
+    }
+    if (lastReward?.taskId === restored.id && lastReward.points === 15) {
+      const nextQualified = Array.from(new Set([...qualifiedFocusTasks, restored.id]));
+      setQualifiedFocusTasks(nextQualified);
+      localStorage.setItem("todo-adhd.qualifiedFocusTasks", JSON.stringify(nextQualified));
+    }
     const nextFocused = focusedTasks.filter((id) => id !== restored.id);
     setFocusedTasks(nextFocused); localStorage.setItem("todo-adhd.focusedTasks", JSON.stringify(nextFocused));
     setLastReward(null);
+    setUndoStreakSnapshot(null);
     void persistTask(restored);
   }
 
@@ -590,11 +620,35 @@ export default function App() {
     lastBuddyActivity.current = "idle";
     stopAlarmSound(); setFocusTaskId(item.id); setFocusMinutes(25); setFocusRemaining(1500);
     setFocusElapsed(0); setFocusQualified(false); setFocusPaused(false); setCheckInOpen(false);
+    setFocusMicroStep(item.microStep || "");
+    setFocusProgressNote(item.progressNote || "");
+  }
+
+  function updateFocusDetail(field: "microStep" | "progressNote", value: string) {
+    if (!focusTaskId) return;
+    if (field === "microStep") setFocusMicroStep(value);
+    else setFocusProgressNote(value);
+    const current = tasksRef.current.find((entry) => entry.id === focusTaskId);
+    if (!current) return;
+    const updated = { ...current, [field]: value };
+    setTasks((entries) => entries.map((entry) => entry.id === focusTaskId ? updated : entry));
+  }
+
+  function saveFocusDetails() {
+    if (!focusTaskId) return;
+    const current = tasksRef.current.find((entry) => entry.id === focusTaskId);
+    if (!current) return;
+    void persistTask({ ...current, microStep: focusMicroStep, progressNote: focusProgressNote });
   }
 
   function endFocus() {
     if (checkInTimeout.current) clearTimeout(checkInTimeout.current);
     checkInTimeout.current = null;
+    if (focusTaskId && focusQualified) {
+      const nextQualified = Array.from(new Set([...qualifiedFocusTasks, focusTaskId]));
+      setQualifiedFocusTasks(nextQualified);
+      localStorage.setItem("todo-adhd.qualifiedFocusTasks", JSON.stringify(nextQualified));
+    }
     setFocusTaskId(null);
     setFocusPaused(false);
     setCheckInOpen(false);
@@ -732,7 +786,7 @@ export default function App() {
       syncBuddy("", "idle", "");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusTaskId, focusPaused]);
+  }, [focusTaskId, focusPaused, sharedTasks]);
 
   // Gentle check-in notification + soft chime
   useEffect(() => {
@@ -1222,13 +1276,27 @@ export default function App() {
           <div className="focus-view">
             <p className="eyebrow">FOCUS SESSION</p>
             <h2>{activeFocusTask.title}</h2>
-            <p>{activeFocusTask.microStep}</p>
+            <div className="focus-detail-fields">
+              <label>
+                What do I need to do?
+                <textarea rows={3} value={focusMicroStep} onChange={(e) => updateFocusDetail("microStep", e.target.value)} onBlur={saveFocusDetails} placeholder="Write the next small action..." />
+              </label>
+              <label>
+                What have I done so far?
+                <textarea rows={3} value={focusProgressNote} onChange={(e) => updateFocusDetail("progressNote", e.target.value)} onBlur={saveFocusDetails} placeholder="Add progress notes as you go..." />
+              </label>
+            </div>
             <div className="focus-clock">{String(Math.floor(focusRemaining / 60)).padStart(2, "0")}:{String(focusRemaining % 60).padStart(2, "0")}</div>
             <div className="focus-presets">{[10, 15, 25, 45].map((mins) => <button type="button" key={mins} className={focusMinutes === mins ? "selected" : ""} onClick={() => { if (focusElapsed === 0) { setFocusMinutes(mins); setFocusRemaining(mins * 60); } }}>{mins} min</button>)}</div>
             {checkInOpen && <div className="checkin-card"><h3>Still on it?</h3><button className="primary" onClick={() => respondToCheckIn(true)}>Yes</button><button className="outline" onClick={() => respondToCheckIn(false)}>Need a break</button></div>}
             {checkInExpired && <div className="checkin-card"><h3>Welcome back, want to continue?</h3><button className="primary" onClick={() => { setCheckInExpired(false); setFocusPaused(false); }}>Continue</button><button className="outline" onClick={() => { setCheckInExpired(false); setFocusPaused(true); }}>Take a break</button></div>}
             {focusRemaining === 0 && <p>Focus session complete. Nice work.</p>}
-            <div className="focus-actions"><button className="outline" onClick={() => setFocusPaused((paused) => !paused)}>{focusPaused ? "Continue" : "Pause"}</button><button className="primary" onClick={() => { setRewardToast("Focus session complete. Nice work."); endFocus(); }}>End session</button><button className="outline" onClick={endFocus}>Close</button></div>
+            <div className="focus-actions">
+              {focusQualified && <button className="primary" onClick={() => { saveFocusDetails(); void toggleDone(activeFocusTask); }}>Complete task · 15 points</button>}
+              <button className="outline" onClick={() => setFocusPaused((paused) => !paused)}>{focusPaused ? "Continue" : "Pause"}</button>
+              <button className="primary" onClick={() => { saveFocusDetails(); setRewardToast("Focus session complete. Nice work."); endFocus(); }}>End session</button>
+              <button className="outline" onClick={() => { saveFocusDetails(); endFocus(); }}>Close</button>
+            </div>
           </div>
         </div>
       )}
