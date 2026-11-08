@@ -68,7 +68,7 @@ jobs:
           if ! gh release view latest >/dev/null 2>&1; then
             gh release create latest "$APK" \
               --title "வினை (Vinai) — Android Mobile App" \
-              --notes "Vinai (வினை) Android APK. Built from the latest main branch."
+              --notes "வினை (Vinai) Android APK. Built from the latest main branch."
           else
             gh release upload latest "$APK" --clobber
             gh release edit latest \
