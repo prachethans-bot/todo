@@ -1048,6 +1048,7 @@ textarea::placeholder, input::placeholder {
 }
 
 .saved-task {
+  transition: opacity 0.25s ease, border-color 0.25s ease;
   display: flex;
   gap: 13px;
   align-items: flex-start;
