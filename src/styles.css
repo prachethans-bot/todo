@@ -2059,3 +2059,73 @@ footer b {
 .done-button.bonus-burst::before,.done-button.bonus-burst::after{inset:-18px;background:radial-gradient(circle at 8% 12%,#e5b95c 0 3px,transparent 4px),radial-gradient(circle at 92% 14%,#86b96c 0 3px,transparent 4px),radial-gradient(circle at 15% 88%,#d98d75 0 3px,transparent 4px),radial-gradient(circle at 88% 84%,#8bb9cb 0 3px,transparent 4px),radial-gradient(circle at 50% 0%,#f0d47a 0 2px,transparent 3px)}
 
 .focus-view{max-height:calc(100dvh - 40px);overflow-y:auto;overscroll-behavior:contain}
+
+
+/* Vinai focus session — match the app's dark black / muted green theme */
+.focus-overlay{
+  background:radial-gradient(ellipse at 50% 0%,#426b3c20,transparent 42%),#0b0d0c;
+  color:#eef2eb;
+}
+.focus-view{
+  background:linear-gradient(160deg,#171d18 0%,#111512 100%);
+  color:#eef2eb;
+  border:1px solid #2b352d;
+  box-shadow:0 20px 70px #0009,0 0 32px #a7ef7908;
+}
+.focus-view .eyebrow{
+  color:var(--green);
+  letter-spacing:.16em;
+  font-size:10px;
+  font-weight:700;
+}
+.focus-view h2{color:#f1f5ef}
+.focus-view>p:not(.eyebrow){color:#aab5a9}
+.focus-clock{
+  color:var(--green);
+  text-shadow:0 0 28px #a7ef7922;
+  font-variant-numeric:tabular-nums;
+}
+.focus-presets button{
+  border:1px solid #303a32;
+  background:#171d18;
+  color:#cbd5ca;
+  transition:background .18s ease,border-color .18s ease,color .18s ease;
+}
+.focus-presets button.selected{
+  background:#263b29;
+  border-color:#789d65;
+  color:#c8f5a6;
+  box-shadow:inset 0 0 0 1px #a7ef791c;
+}
+.focus-detail-fields label{color:#dce5da}
+.focus-detail-fields textarea{
+  border:1px solid #303a32;
+  background:#0d110e;
+  color:#eef2eb;
+  caret-color:var(--green);
+}
+.focus-detail-fields textarea::placeholder{color:#758075}
+.focus-detail-fields textarea:focus{
+  border-color:#789d65;
+  box-shadow:0 0 0 3px #a7ef7918;
+}
+.focus-view .checkin-card{
+  background:#1a241b;
+  border:1px solid #344333;
+  color:#eef2eb;
+}
+.focus-view .checkin-card h3{color:#eef2eb}
+.focus-view .primary{
+  background:var(--green);
+  border:1px solid var(--green);
+  color:#10150e;
+}
+.focus-view .outline{
+  background:#171d18;
+  border:1px solid #3a463b;
+  color:#dce5da;
+}
+.focus-view .primary:active,.focus-view .outline:active{transform:scale(.98)}
+@media(prefers-reduced-motion:reduce){
+  .focus-presets button{transition:none}
+}
