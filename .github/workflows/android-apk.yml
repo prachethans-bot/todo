@@ -12,6 +12,7 @@ on:
       - "capacitor.config.ts"
       - "vite.config.ts"
       - "android/**"
+      - "scripts/**"
       - ".github/workflows/android-apk.yml"
 
 permissions:
@@ -77,8 +78,8 @@ jobs:
           else
             gh release upload latest "$APK" --clobber
             gh release edit latest \
-              --title "Vinai — Android Mobile App" \
-              --notes "Vinai (வினை) Android APK. Built from the latest main branch." \
+              --title "வினை (Vinai) — Android Mobile App" \
+              --notes "வினை (Vinai) Android APK. Built from the latest main branch." \
               --latest
           fi
 
