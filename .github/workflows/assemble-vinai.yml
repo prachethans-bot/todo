@@ -18,7 +18,8 @@ jobs:
         with:
           ref: vinai-full-rebuild
           fetch-depth: 0
-      - name: Assemble supplied design source
+
+      - name: Assemble the supplied design source
         shell: bash
         run: |
           set -euo pipefail
@@ -35,33 +36,41 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "Rebuild Vinai from supplied design"
+          git commit -m "Rebuild Vinai from supplied Figma design"
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
+
       - name: Install locked dependencies
         run: npm ci
+
       - name: Type-check and build web app
         run: npm run build
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_PUBLIC_URL: ${{ secrets.VITE_PUBLIC_URL }}
+
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
+
       - name: Sync Capacitor Android project
         run: npx cap sync android
+
       - name: Build Android APK
         working-directory: android
         run: ./gradlew assembleDebug
+
       - name: Verify APK exists
         run: test -s android/app/build/outputs/apk/debug/app-debug.apk
-      - name: Promote verified source to main
+
+      - name: Ensure main branch has not moved and promote the verified rebuild
         shell: bash
         run: |
           set -euo pipefail
@@ -72,6 +81,7 @@ jobs:
           REMOTE_MAIN_SHA="$(git ls-remote origin refs/heads/main | cut -f1)"
           test "$PROMOTED_SHA" = "$REMOTE_MAIN_SHA"
           echo "PROMOTED_SHA=$PROMOTED_SHA" >> "$GITHUB_ENV"
+
       - name: Upload APK build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -79,18 +89,26 @@ jobs:
           path: android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
-      - name: Publish verified APK release asset
+
+      - name: Publish the verified APK to the latest GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
           REMOTE_MAIN_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
-          test "$REMOTE_MAIN_SHA" = "$PROMOTED_SHA"
+          if [[ "$REMOTE_MAIN_SHA" != "$PROMOTED_SHA" ]]; then
+            echo "Not publishing a stale APK; main moved after this build."
+            exit 1
+          fi
           APK="android/app/build/outputs/apk/debug/app-debug.apk"
           if ! gh release view latest >/dev/null 2>&1; then
-            gh release create latest "$APK" --title "வினை (Vinai) — Android Mobile App" --notes "Rebuilt from the supplied design and verified in GitHub Actions."
+            gh release create latest "$APK" \
+              --title "வினை (Vinai) — Android Mobile App" \
+              --notes "Rebuilt from the supplied design and verified in GitHub Actions."
           else
             gh release upload latest "$APK" --clobber
-            gh release edit latest --latest --title "வினை (Vinai) — Android Mobile App" --notes "Rebuilt from the supplied design and verified in GitHub Actions."
+            gh release edit latest --latest \
+              --title "வினை (Vinai) — Android Mobile App" \
+              --notes "Rebuilt from the supplied design and verified in GitHub Actions."
           fi
