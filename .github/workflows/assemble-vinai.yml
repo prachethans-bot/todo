@@ -1,0 +1,96 @@
+name: Assemble Vinai rebuild
+on:
+  push:
+    branches: [vinai-full-rebuild]
+    paths:
+      - ".rebuild-upload/**"
+      - ".github/workflows/assemble-vinai.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  assemble-build-and-promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out staging branch
+        uses: actions/checkout@v4
+        with:
+          ref: vinai-full-rebuild
+          fetch-depth: 0
+      - name: Assemble supplied design source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .rebuild-upload/p*.b64 > /tmp/vinai-rebuild.tar.gz.b64
+          test "$(wc -c < /tmp/vinai-rebuild.tar.gz.b64)" -eq 57524
+          base64 --decode /tmp/vinai-rebuild.tar.gz.b64 > /tmp/vinai-rebuild.tar.gz
+          tar -tzf /tmp/vinai-rebuild.tar.gz
+          tar -xzf /tmp/vinai-rebuild.tar.gz -C .
+          test -s src/App.tsx
+          test -s src/styles.css
+          test -s public/stay-hard-hero.jpg
+          rm -rf .rebuild-upload
+          rm -f src/components/Hero3D.tsx src/components/LoadingScreen.tsx public/goggins-hero.jpg
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Rebuild Vinai from supplied design"
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Type-check and build web app
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_PUBLIC_URL: ${{ secrets.VITE_PUBLIC_URL }}
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Sync Capacitor Android project
+        run: npx cap sync android
+      - name: Build Android APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+      - name: Verify APK exists
+        run: test -s android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Promote verified source to main
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main
+          git merge-base --is-ancestor origin/main HEAD
+          git push origin HEAD:main
+          PROMOTED_SHA="$(git rev-parse HEAD)"
+          REMOTE_MAIN_SHA="$(git ls-remote origin refs/heads/main | cut -f1)"
+          test "$PROMOTED_SHA" = "$REMOTE_MAIN_SHA"
+          echo "PROMOTED_SHA=$PROMOTED_SHA" >> "$GITHUB_ENV"
+      - name: Upload APK build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vinai-android-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+      - name: Publish verified APK release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          REMOTE_MAIN_SHA="$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)"
+          test "$REMOTE_MAIN_SHA" = "$PROMOTED_SHA"
+          APK="android/app/build/outputs/apk/debug/app-debug.apk"
+          if ! gh release view latest >/dev/null 2>&1; then
+            gh release create latest "$APK" --title "வினை (Vinai) — Android Mobile App" --notes "Rebuilt from the supplied design and verified in GitHub Actions."
+          else
+            gh release upload latest "$APK" --clobber
+            gh release edit latest --latest --title "வினை (Vinai) — Android Mobile App" --notes "Rebuilt from the supplied design and verified in GitHub Actions."
+          fi
