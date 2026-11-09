@@ -159,3 +159,10 @@ npm run preview
 1. Run `supabase/migrations/002_buddy.sql` in the Supabase SQL Editor.
 2. Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` and `VITE_PUBLIC_URL` (your deployed web URL, used in invite links). For the APK add them as GitHub repo secrets of the same names.
 3. Deploy the web build (e.g. Vercel) so friends can open `/?buddy=TOKEN` without installing the app.
+
+
+## Written AI task confirmation
+
+Completing an active task opens a written-confirmation screen instead of using a camera or photo proof. The user can describe what they did or the relevant next action in their own words. The authenticated Supabase Edge Function compares that update with the saved task title and micro-step using the server-side Gemini API key. Unrelated or generic text is rejected with feedback; a relevant update is saved as a progress note and completes the task. Completed tasks leave the active list with a slide-away animation. The UI does not impose a word-count limit.
+
+The verifier uses the Supabase secret `GEMINI_API_KEY`. An optional `GEMINI_TASK_VERIFY_MODEL` secret can override the default model (`gemini-3.5-flash-lite`). The key must remain server-side in Supabase Edge Function secrets, never in a frontend `VITE_*` variable.

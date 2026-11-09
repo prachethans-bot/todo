@@ -103,6 +103,11 @@ export default function App() {
   const [isLoaded, setIsLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
+  const [verificationTask, setVerificationTask] = useState<SavedTask | null>(null);
+  const [verificationText, setVerificationText] = useState("");
+  const [verificationBusy, setVerificationBusy] = useState(false);
+  const [verificationError, setVerificationError] = useState("");
+  const [leavingTaskIds, setLeavingTaskIds] = useState<string[]>([]);
 
   // Clock Picker state
   const [reminderTime, setReminderTime] = useState<string | null>(null);
@@ -329,7 +334,7 @@ export default function App() {
   async function handleAlarmDone(taskId?: string) {
     if (!taskId) return;
     const target = tasksRef.current.find((t) => t.id === taskId);
-    if (target) void toggleDone(target);
+    if (target) openTaskVerification(target);
   }
 
   function startTaskFromAlarm(item?: SavedTask) {
@@ -530,6 +535,79 @@ export default function App() {
     setTask("");
     setReminderTime(null);
     setReminderAt(null);
+  }
+
+  function openTaskVerification(item: SavedTask) {
+    if (item.completed) return;
+    setVerificationTask(item);
+    setVerificationError("");
+    setVerificationText("");
+    stopAlarmSound();
+    if (focusTaskId === item.id) setFocusPaused(true);
+  }
+
+  async function verifyAndCompleteTask() {
+    const target = verificationTask;
+    const writtenUpdate = verificationText.trim();
+    if (!target || verificationBusy) return;
+    if (!writtenUpdate) {
+      setVerificationError("Add a little detail so the AI can check how it relates to this task.");
+      return;
+    }
+    if (!supabase || !session) {
+      setVerificationError("Sign in to use AI task verification. Your saved task is still here.");
+      return;
+    }
+
+    setVerificationBusy(true);
+    setVerificationError("");
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-task-start", {
+        body: {
+          taskTitle: target.title,
+          microStep: target.microStep,
+          userResponse: writtenUpdate
+        }
+      });
+      if (error) throw new Error(error.message || "The AI verifier could not be reached.");
+      if (!data || typeof data.approved !== "boolean") {
+        throw new Error("The AI verifier returned an unexpected response. Please try again.");
+      }
+      if (!data.approved) {
+        setVerificationError(
+          typeof data.reason === "string" && data.reason.trim()
+            ? data.reason
+            : "That update doesn't clearly match this task yet. Add a little more detail and try again."
+        );
+        return;
+      }
+
+      setVerificationTask(null);
+      setVerificationError("");
+      setVerificationText("");
+      setLeavingTaskIds((current) =>
+        current.includes(target.id) ? current : [...current, target.id]
+      );
+
+      // Let the task slide out first, then persist completion and award the normal rewards.
+      window.setTimeout(() => {
+        setLeavingTaskIds((current) => current.filter((id) => id !== target.id));
+        const updated = {
+          ...target,
+          progressNote: [target.progressNote, writtenUpdate].filter(Boolean).join("\n\n")
+        };
+        void toggleDone(updated, true);
+        setNotice("Verified. Nice work.");
+      }, 460);
+    } catch (error) {
+      setVerificationError(
+        error instanceof Error
+          ? error.message
+          : "AI task verification is unavailable right now. Please try again."
+      );
+    } finally {
+      setVerificationBusy(false);
+    }
   }
 
   async function toggleDone(item: SavedTask, skipCheck = false) {
@@ -883,8 +961,9 @@ export default function App() {
     };
   }, [checkInOpen]);
 
-  const remainingCount = tasks.filter((t) => !t.completed).length;
-  const rightNowTask = tasks.find((t) => !t.completed && t.reminderAt) || tasks.find((t) => !t.completed);
+  const activeTasks = tasks.filter((t) => !t.completed);
+  const remainingCount = activeTasks.length;
+  const rightNowTask = activeTasks.find((t) => t.reminderAt) || activeTasks[0];
 
   return (
     <main className="shell">
@@ -1206,22 +1285,22 @@ export default function App() {
           </div>
         )}
 
-        {tasks.length === 0 ? (
+        {activeTasks.length === 0 ? (
           <div className="panel empty-list">
             <Sparkles size={20} />
             <p>Your saved steps will show up here.</p>
           </div>
         ) : (
           <div className="task-list">
-            {tasks.map((item) => (
+            {activeTasks.map((item) => (
               <article
-                className={(item.completed ? "saved-task is-done" : "saved-task") + (focusedTasks.includes(item.id) ? " is-focused" : "")}
+                className={((leavingTaskIds.includes(item.id) ? "saved-task slide-away" : "saved-task")) + (focusedTasks.includes(item.id) ? " is-focused" : "")}
                 key={item.id}
               >
                 <button
                   className={"done-button" + (burstTaskId === item.id ? " confetti-burst" : "") + (lastReward?.taskId === item.id && lastReward.bonus > 0 ? " bonus-burst" : "")}
-                  aria-label={item.completed ? "Mark as not done" : "Mark as complete"}
-                  onClick={() => void toggleDone(item)}
+                  aria-label="Verify and complete task"
+                  onClick={() => openTaskVerification(item)}
                 >
                   {item.completed ? <CheckCircle2 size={21} /> : <span />}
                   {floatingReward?.taskId === item.id && <span className="checkbox-reward-float">{floatingReward.label}</span>}
@@ -1294,6 +1373,56 @@ export default function App() {
       </section>
 
 
+      {verificationTask && (
+        <div className="task-verification-overlay" role="dialog" aria-modal="true" aria-label="Verify task completion">
+          <section className="task-verification-page">
+            <button
+              type="button"
+              className="task-verification-back"
+              onClick={() => setVerificationTask(null)}
+              disabled={verificationBusy}
+            >
+              <span aria-hidden="true">←</span> Back to tasks
+            </button>
+            <p className="eyebrow">TASK CHECK</p>
+            <h2>Tell us what you did.</h2>
+            <p className="task-verification-intro">
+              Write what you did or what you’re going to do next. The AI checks that your update matches this task.
+            </p>
+            <div className="task-verification-context">
+              <small>YOUR TASK</small>
+              <h3>{verificationTask.title}</h3>
+              <p>{verificationTask.microStep}</p>
+            </div>
+            <form
+              className="task-verification-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void verifyAndCompleteTask();
+              }}
+            >
+              <label htmlFor="task-verification-text">Your update</label>
+              <textarea
+                id="task-verification-text"
+                rows={8}
+                value={verificationText}
+                onChange={(event) => setVerificationText(event.target.value)}
+                placeholder="Write freely about what you did or what you’re planning to do for this task..."
+                autoFocus
+              />
+              {verificationError && (
+                <p className="task-verification-error" role="alert">{verificationError}</p>
+              )}
+              <button className="primary" type="submit" disabled={verificationBusy || !verificationText.trim()}>
+                {verificationBusy ? "Checking with AI…" : "Verify and complete"}
+                {!verificationBusy && <Check size={16} />}
+              </button>
+            </form>
+            <p className="task-verification-footnote">A relevant update completes the task. Unrelated updates leave it open.</p>
+          </section>
+        </div>
+      )}
+
       {rewardToast && <div className="reward-toast" role="status">{rewardToast}</div>}
       {cheerFloat && <div className="cheer-float" aria-hidden="true">{cheerFloat}</div>}
       {tooFastTask && (
@@ -1330,7 +1459,7 @@ export default function App() {
             {checkInExpired && <div className="checkin-card"><h3>Welcome back, want to continue?</h3><button className="primary" onClick={() => { setCheckInExpired(false); setFocusPaused(false); }}>Continue</button><button className="outline" onClick={() => { setCheckInExpired(false); setFocusPaused(true); }}>Take a break</button></div>}
             {focusRemaining === 0 && <p>Focus session complete. Nice work.</p>}
             <div className="focus-actions">
-              {focusQualified && <button className="primary" onClick={() => { saveFocusDetails(); void toggleDone(activeFocusTask); }}>Complete task · 15 points</button>}
+              {focusQualified && <button className="primary" onClick={() => { saveFocusDetails(); openTaskVerification(activeFocusTask); }}>Complete task · 15 points</button>}
               <button className="outline" onClick={() => setFocusPaused((paused) => !paused)}>{focusPaused ? "Continue" : "Pause"}</button>
               <button className="primary" onClick={() => { saveFocusDetails(); setRewardToast("Focus session complete. Nice work."); endFocus(); }}>End session</button>
               <button className="outline" onClick={() => { saveFocusDetails(); endFocus(); }}>Close</button>
