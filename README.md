@@ -1,168 +1,37 @@
-# Todo for ADHD — ADHD-friendly task assistant
+# வினை (Vinai) — ADHD-friendly task and focus app
 
-Todo for ADHD helps users begin overwhelming work with one tiny, concrete action at a time. It is designed to feel supportive, not demanding.
+வினை turns overwhelming tasks into small, clear next actions. The UI uses the monochrome silver-on-black design exported from the supplied Figma Make archive. The original app's task engine, storage, notifications, focus sessions, rewards, buddy flow, Supabase integration, and Capacitor Android shell are preserved.
 
-## Features in this repository
+## Included features
 
-- Responsive dark interface with muted green accents.
-- Four modes: `NEW_TASK`, `NEXT_STEP`, `TOO_HARD`, and `TIME_CHECK`.
-- Structured micro-step response with a supportive encouragement and time-estimate prompt.
-- Saved task list stored in browser local storage, including completion and time feedback.
-- Optional reminders with repeating in-app sound in web mode, plus native OS-scheduled local notifications when packaged as an Android/iOS app with Capacitor. Native notifications can be delivered while the app is closed, subject to OS permissions and battery/system settings. The browser/PWA fallback is not guaranteed when closed.
-- Supabase email/password authentication.
-- Optional Supabase cloud task sync protected by Row Level Security (RLS).
-- Supabase Edge Function for authenticated AI requests. If no OpenAI key is configured, it returns a safe built-in response.
-- SQL migration for the user-owned tasks table and RLS policies.
+- Four AI helper modes: new task, next step, too hard, and time check, with a local fallback when connected AI is unavailable.
+- Saved tasks with estimates, actual-time feedback, local persistence, and optional authenticated Supabase sync.
+- Native Android scheduled reminders with repeat notifications, snooze, a round clock picker, and a browser-only fallback while the tab is active.
+- A written AI task confirmation screen. It checks the user's update against the saved task and micro-step, rejects unrelated updates, and removes verified tasks from the active list. Camera/photo proof is not included.
+- Focus sessions, adjustable timers, editable next-action and progress notes, check-ins, pause/resume, and focus-completion points.
+- Points, occasional bonus points, streaks, sound, haptics, visual rewards, and undo.
+- Optional accountability-buddy invitations, controlled status sharing, pause/disconnect, and cheers.
+- Timed multi-step planner with editable work/break durations and reminder support.
 
-## Deploy to Vercel
-
-1. Import this GitHub repository into Vercel.
-2. Keep the framework preset as **Vite** and the build command as `npm run build`.
-3. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables only if you have configured your own Supabase project.
-4. Deploy. Then add your deployed domain to the Supabase Auth redirect URL allowlist.
-5. Set `OPENAI_API_KEY` only in Supabase Edge Function secrets, never in Vercel `VITE_*` variables.
-
-A Vercel configuration file supplies SPA fallback and baseline security headers.
-
-## Run locally
-
-1. Install Node.js LTS.
-2. Clone the repo and open it in VS Code.
-3. Install dependencies with `npm install`.
-4. Copy `.env.example` to `.env.local` and add your Supabase project URL and publishable/anon key.
-5. Run `npm run dev`.
-
-The local task flow works without Supabase configuration. Guest tasks and each signed-in account have separate local storage. Authentication, cloud sync and the Edge Function need your Supabase project.
-
-## Supabase setup
-
-1. Create a Supabase project.
-2. In **SQL Editor**, run `supabase/migrations/001_create_tasks.sql`.
-3. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in local `.env.local`.
-4. Deploy the Edge Function named `stepwise-assistant` from `supabase/functions/stepwise-assistant/index.ts`.
-5. Set the function secrets:
-   - `OPENAI_API_KEY` — optional, for real AI output.
-   - `OPENAI_MODEL` — optional; defaults to `gpt-4o-mini`.
-6. The function uses `SUPABASE_URL` and `SUPABASE_ANON_KEY` provided by the Supabase Edge Function environment. It validates the caller's session before processing.
-7. In Supabase Auth settings, configure the Site URL and allowed redirect URLs for your local and deployed app.
-
-Deploy with the Supabase CLI from the repository root:
+## Local development
 
 ```bash
-supabase login
-supabase link --project-ref YOUR_PROJECT_REF
-supabase db push
-supabase secrets set OPENAI_API_KEY=YOUR_KEY
-supabase functions deploy stepwise-assistant
+npm install
+npm run dev
+npm run build
 ```
 
-If you do not want AI enabled yet, omit the OpenAI key and the authenticated function returns its built-in response. Never put an OpenAI key, service-role key, or other private secret in a `VITE_*` variable or commit it to GitHub.
+## Environment
 
-## Run on your laptop and phone
+Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` for authentication, cloud sync, AI verification, and buddy invites. Provider keys must stay in Supabase Edge Function secrets. The existing functions are `stepwise-assistant` and `verify-task-start`; the latter uses `GEMINI_API_KEY` server-side.
 
-### Laptop (local development)
+## Android APK
 
-1. Install the current Node.js LTS release from https://nodejs.org and install Git if needed.
-2. Open PowerShell or the VS Code terminal and run:
+The repository contains the Capacitor Android project and GitHub Actions APK workflow. A push to `main` that changes app source or public assets triggers a build, publishes the debug APK artifact, and refreshes the `latest` release asset. Native reminders use Android local notifications and are subject to device notification, exact-alarm, and battery settings.
 
-   ```bash
-   git clone https://github.com/prachethans-bot/todo.git
-   cd todo
-   npm install
-   npm run dev
-   ```
+## Important behavior
 
-3. Open the local URL Vite prints, usually http://localhost:5173. You can use the app without Supabase; tasks are saved in that browser on that device.
-
-### Test on your phone over the same Wi-Fi
-
-1. Connect your phone and laptop to the same Wi-Fi network.
-2. In the project folder on the laptop, run `npm run dev -- --host 0.0.0.0`.
-3. Find your laptop's local IPv4 address (Windows PowerShell: `ipconfig`; look for IPv4 Address under the active Wi-Fi adapter).
-4. On the phone, open `http://LAPTOP-IP:5173`, replacing `LAPTOP-IP` with that address. If it does not load, allow Node.js/Vite through Windows Firewall on your private network.
-5. This is for local testing only. The laptop must stay on and the dev server must keep running. HTTP over a local IP may not support install prompts, service workers, or notifications on every phone/browser.
-
-### Install it like an app on both devices (recommended)
-
-1. Deploy the repo to an HTTPS host such as Vercel: sign in at https://vercel.com, choose **Add New → Project**, import `prachethans-bot/todo`, use the Vite preset and `npm run build`, then deploy.
-2. If you have not set up Supabase yet, leave its environment variables unset; local task mode still works. Authentication, cloud sync, and connected AI need a configured Supabase project.
-3. Open the deployed HTTPS URL in Chrome on Android and choose **⋮ → Add to Home screen** or **Install app**. On iPhone, open the URL in Safari, tap **Share → Add to Home Screen**.
-4. On the laptop, open the same HTTPS URL in Chrome or Edge and use the install icon in the address bar or browser menu → **Install app**.
-5. Open the installed app once, allow notifications when prompted after setting a reminder, and test with a reminder one or two minutes ahead.
-
-A deployed HTTPS URL is needed for the most consistent PWA install experience. Installing the PWA does not turn browser timers into guaranteed OS alarms. Test the alarm on each device before relying on it.
-
-## Native phone app and background notifications
-
-For device-scheduled reminders while the app is closed, use the Capacitor native wrapper. This repository includes the Capacitor configuration and notification plugin; native platform projects are generated on your computer.
-
-### Android (Windows laptop)
-
-1. Install Android Studio and its Android SDK: https://developer.android.com/studio
-2. In the project folder, run:
-
-   ```bash
-   npm install
-   npx cap add android
-   npm run cap:sync
-   npx cap open android
-   ```
-
-   If the Android project already exists, skip `npx cap add android`.
-3. In Android Studio, let Gradle finish syncing, connect your Android phone with USB debugging enabled (or use an emulator), and press **Run**.
-4. Accept notification permission on the phone. Create a reminder a few minutes ahead and test it with the app in the background and then closed.
-5. Keep Android and app notification permissions enabled. Some Android versions or battery-saving settings may delay notifications; test on the actual device.
-
-The native local-notification plugin schedules reminders with the operating system. This is a scheduled notification with the system notification sound, not a custom continuously ringing alarm-clock service. Exact delivery can depend on OS settings and permissions.
-
-### iPhone
-
-To build and sign an iOS app, you need a Mac with Xcode. On the Mac, install dependencies, then run `npx cap add ios`, `npm run cap:sync`, and `npx cap open ios`. Configure signing in Xcode and run on your iPhone. iOS controls background notification delivery and sound behavior.
-
-### Web/PWA fallback
-
-On the web, the app plays a repeating in-page sound when the reminder fires, but browser timers can be suspended when the tab is closed, the device sleeps, or the browser is restricted. Use the native app for OS-scheduled reminders.
-
-## Install and offline basics
-
-The production build registers a small service worker and includes a web app manifest. Once opened online, the app shell and same-origin static assets can be cached for later visits. AI requests and Supabase authentication/cloud sync still require an internet connection. Browser reminder timers are not guaranteed while the browser is closed.
-
-## Accessibility and motion
-
-- Keyboard focus styles and a skip link are included.
-- The hero uses a real-time Three.js 3D-rendered, animated motivational athlete character with lighting, facial structure, idle movement, and reduced-motion support.
-- The portrait is an abstract illustration, not an official likeness or an imported 3D model.
-
-## Build
-
-```bash
-npm run build
-npm run preview
-``
-
-## Known limitations
-
-- The hero is a procedurally built 3D athlete, not an exact David Goggins likeness or a scanned/rigged human model. A faithful likeness needs a properly licensed, detailed 3D model and animation asset.
-- Native local notifications can be scheduled with the operating system when the project is packaged with Capacitor and installed on a device; delivery depends on OS permission and battery/system settings. This is a scheduled system notification, not a guaranteed continuously ringing alarm-clock service.\n- In web/PWA mode, the repeating in-page alarm only works while the page is running. Browser timers are not reliable when the app is closed or the device sleeps.
-- Cloud task sync requires the SQL migration and a correctly configured Supabase project.
-- The AI function requires deployment; real AI generation additionally requires an OpenAI API key stored as a server-side secret.
-- The app is an early-stage product and should receive a local build, accessibility, and security review before public launch.
-
-## Security notes
-
-- Frontend Supabase keys are public by design; protect data with RLS.
-- Never expose service-role or AI provider keys in frontend code.
-- The Edge Function validates the caller with Supabase Auth before accepting a task.
-- Tasks may contain personal information. Avoid entering sensitive data and review privacy and retention practices before launch.
-
-## Accountability buddy setup
-1. Run `supabase/migrations/002_buddy.sql` in the Supabase SQL Editor.
-2. Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` and `VITE_PUBLIC_URL` (your deployed web URL, used in invite links). For the APK add them as GitHub repo secrets of the same names.
-3. Deploy the web build (e.g. Vercel) so friends can open `/?buddy=TOKEN` without installing the app.
-
-
-## Written AI task confirmation
-
-Completing an active task opens a written-confirmation screen instead of using a camera or photo proof. The user can describe what they did or the relevant next action in their own words. The authenticated Supabase Edge Function compares that update with the saved task title and micro-step using the server-side Gemini API key. Unrelated or generic text is rejected with feedback; a relevant update is saved as a progress note and completes the task. Completed tasks leave the active list with a slide-away animation. The UI does not impose a word-count limit.
-
-The verifier uses the Supabase secret `GEMINI_API_KEY`. An optional `GEMINI_TASK_VERIFY_MODEL` secret can override the default model (`gemini-3.5-flash-lite`). The key must remain server-side in Supabase Edge Function secrets, never in a frontend `VITE_*` variable.
+- Completing a task opens a separate written-confirmation screen, never a camera.
+- A relevant written update is verified server-side, saved as a progress note, and the task slides away from the active list.
+- Unrelated or generic updates are rejected with guidance, leaving the task active.
+- Local task storage is available without signing in. AI verification and cloud buddy features require a configured, signed-in Supabase account.
