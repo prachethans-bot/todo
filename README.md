@@ -1,74 +1,70 @@
-# வினை — fresh application foundation
+# வினை — fresh ADHD-friendly task and focus app
 
-A calm, monochrome ADHD-friendly task and focus workspace. This branch is a clean rebuild of the visible product experience while keeping the existing repository's main branch untouched.
+வினை is a low-pressure task, focus, timed-planning, and accountability app. This branch rebuilds the product experience while keeping the repository's `main` branch untouched.
 
-## Current implementation
+## Implemented
 
-- Responsive phone-first interface with a desktop device frame.
-- Tamil wordmark, graphite/silver liquid-glass styling, and monochrome hero poster.
+- Phone-first monochrome black, graphite, and silver interface with a Tamil wordmark.
 - Today, Timed plan, and My buddy sections.
-- Local task creation, completion, undo, and deletion.
-- Physical micro-step suggestions, including a smaller response for "Too hard".
-- Focus countdown with pause/resume/stop and a progress note field.
-- Editable timed-plan steps and durations, with a 15–240 minute total-time selector.
-- Local points and timezone-local activity-day streak.
-- Task reminders through Capacitor Local Notifications on Android.
-- Foreground browser reminder checks while the web app is open.
-- Local persistence so tasks remain available after refresh.
+- Email/password sign-up and sign-in through Supabase Auth.
+- Private task CRUD using the existing `public.tasks` table and authenticated-user RLS policies.
+- Server-side AI microsteps through `stepwise-assistant`, with a local fallback.
+- AI-generated timed plans through the new `timed-plan-assistant` Edge Function, with a local fallback.
+- Editable plan steps and durations (15–240 minute total plan length).
+- Focus timer with pause/resume, saved progress notes, and a small-step reset.
+- Instant checkbox completion, +10 points, a 1-in-5 +25 bonus, undo, a brief reward animation, soft sound, and optional vibration.
+- Local activity-day streak and points.
+- Private buddy invitation links and focus-status sharing using the existing buddy RPC functions.
+- Android local reminders through Capacitor Local Notifications.
+- PWA manifest, Tamil icon, and an offline app-shell cache.
 
-## Not yet connected
+## Backend
 
-These are intentionally not represented as finished:
+The existing Supabase project is reused. It already has authenticated task RLS, buddy RPC functions, and the `stepwise-assistant` function. This branch adds the `timed-plan-assistant` function and a `points_awarded` column on tasks.
 
-- Supabase sign-in, cloud task synchronization, and cross-device recovery.
-- Server-side AI generation through the `stepwise-assistant` Edge Function.
-- Server-authoritative points ledger and streak transaction.
-- Real buddy invites, relationship permissions, and Supabase Realtime.
-- Full alarm reconciliation, repeat rules, exact-alarm handling, and device-reboot recovery.
-- Two-user RLS verification and real-device notification QA.
-
-The buddy form currently saves a local note only. The task assistant currently uses a deterministic local fallback, not a hosted AI model. Local points and streaks are not tamper-resistant or synced.
+AI provider credentials remain in Supabase Edge Function secrets. The browser only uses the public Supabase URL and publishable/anon key.
 
 ## Run locally
 
 Requirements: Node.js 20 or newer.
 
 ```bash
+cp .env.example .env
 npm ci
 npm run dev
 ```
 
-Create a local `.env` from `.env.example` when Supabase is configured. Do not add service-role keys or provider secrets to Vite environment variables.
+Set `VITE_PUBLIC_URL` to the deployed web origin when building the Android app so buddy invite links open the web invitation page.
 
-## Build the web app
+## Production web build
 
 ```bash
 npm run build
 npm run preview
 ```
 
-A GitHub Actions workflow on this branch runs the production TypeScript/Vite build and uploads the `dist` folder as an artifact.
+GitHub Actions runs a TypeScript/Vite production build on the fresh branch and uploads the `dist` artifact.
 
 ## Android
 
-The repository includes Capacitor and the Android project. Build the web app first, then:
+The Capacitor application ID is `com.vinai.focus`.
 
 ```bash
 npm run cap:sync
+npm run cap:android
 ```
 
-Open the Android project in Android Studio to inspect and build it. Android local notifications depend on OS permission, exact-alarm policy, battery settings, and device-vendor behavior. A local notification is not guaranteed to behave like a dedicated alarm clock.
+Build a debug or signed release APK from Android Studio. Android local notifications are scheduled with the OS and can fire while the app is closed, subject to notification permission, exact-alarm policy, battery restrictions, and device-vendor behavior.
 
-## Reminder limitations
+## Not yet verified / remaining work
 
-- Browser timers and notifications are best-effort and only checked while the app is open. Browsers can suspend background tabs.
-- Android local notifications are scheduled through the OS, but exact delivery and audible alarm behavior depend on Android version, permission state, and battery optimization.
-- This branch has not yet been validated on a physical Android device.
+- Vercel preview builds are still pending; inspect the build and runtime logs before calling the web release ready.
+- Supabase Auth email confirmation, redirect URLs, and password-reset flow need a real account test.
+- Physical Android tests are required for notification permission, app-closed delivery, device reboot, and battery optimization.
+- Repeating alarms, snooze, exact-alarm permission education, and reboot rescheduling are not yet implemented in this fresh branch.
+- Points and streaks are stored locally, not in a server-authoritative per-user ledger.
+- Timed-plan edits are currently session state and are not persisted to the cloud.
+- Offline cloud-write reconciliation and multi-device conflict handling are not implemented.
+- Buddy invitation and status sharing need a two-account end-to-end test.
 
-## Security and configuration
-
-The `.env.example` contains only public client configuration placeholders. Keep all privileged Supabase keys and AI provider keys in Supabase Edge Function secrets. Do not commit real credentials.
-
-## Verification status
-
-The source has been committed to the `fresh-vinai-foundation` branch. The automated production build is the next verification gate; no claim is made here that Supabase RLS, Edge Functions, offline cloud reconciliation, or physical-device notifications have passed tests.
+The task checkbox completes immediately. There is no camera/photo proof flow in this fresh UI.
