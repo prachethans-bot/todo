@@ -18,6 +18,8 @@ const STORE = "vinai.fresh.v1";
 const pad = (n: number) => String(n).padStart(2, "0");
 const localInputDate = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 const fmt = (seconds: number) => `${pad(Math.floor(Math.max(0,seconds)/60))}:${pad(Math.max(0,seconds)%60)}`;
+function dayKey(date: Date) { return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`; }
+function streakFromDays(days: string[]) { const set = new Set(days); const today = new Date(); let cursor = new Date(today); if (!set.has(dayKey(cursor))) cursor.setDate(cursor.getDate()-1); let count = 0; while (set.has(dayKey(cursor))) { count++; cursor.setDate(cursor.getDate()-1); } return count; }
 const seedTasks: Task[] = [
   { id: "seed-1", title: "Open the maths chapter", step: "Put the textbook on your desk.", createdAt: new Date().toISOString(), completed: false, reminderAt: "", note: "", estimate: 20 },
   { id: "seed-2", title: "Reply to one important message", step: "Open your messages and find the conversation.", createdAt: new Date().toISOString(), completed: false, reminderAt: "", note: "", estimate: 10 }
@@ -61,6 +63,7 @@ export default function App() {
     catch { return seedTasks; }
   });
   const [points, setPoints] = useState(() => { try { return Number(JSON.parse(localStorage.getItem(STORE) || "{}").points ?? 120); } catch { return 120; } });
+  const [activityDays, setActivityDays] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem(STORE) || "{}").activityDays ?? []; } catch { return []; } });
   const [tab, setTab] = useState<Tab>("today");
   const [title, setTitle] = useState("");
   const [reminder, setReminder] = useState("");
@@ -79,11 +82,12 @@ export default function App() {
   const [toast, setToast] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const completed = tasks.filter(t => t.completed).length;
+  const streak = streakFromDays(activityDays);
   const openTasks = tasks.filter(t => !t.completed);
   const today = new Date().toLocaleDateString("en-IN", { weekday: "long", month: "long", day: "numeric" });
   const activeTask = tasks.find(t => t.id === focusTask);
 
-  useEffect(() => { localStorage.setItem(STORE, JSON.stringify({ tasks, points })); }, [tasks, points]);
+  useEffect(() => { localStorage.setItem(STORE, JSON.stringify({ tasks, points, activityDays })); }, [tasks, points, activityDays]);
   useEffect(() => {
     if (!running && !planRunning) return;
     const id = window.setInterval(() => {
@@ -145,7 +149,7 @@ export default function App() {
   }
   function completeTask(id: string) {
     const task = tasks.find(t => t.id === id); if (!task || task.completed) return;
-    setTasks(v => v.map(t => t.id === id ? { ...t, completed: true } : t)); setPoints(v => v + 10);
+    setTasks(v => v.map(t => t.id === id ? { ...t, completed: true } : t)); setPoints(v => v + 10); setActivityDays(v => [...new Set([...v, dayKey(new Date())])]);
     setToast("A small win. +10 points");
   }
   function undoTask(id: string) {
@@ -202,7 +206,7 @@ export default function App() {
 
         <section className="stats-grid">
           <div className="glass stat-card"><span className="eyebrow">YOUR POINTS</span><strong>{points} <small>pts</small></strong><p>Every small win counts</p></div>
-          <div className="glass stat-card"><span className="eyebrow">SHOWING UP</span><strong><Flame size={18}/> 1 <small>day</small></strong><p>You’re here, and that counts</p></div>
+          <div className="glass stat-card"><span className="eyebrow">SHOWING UP</span><strong><Flame size={18}/> {streak} <small>day{streak===1?"":"s"}</small></strong><p>{streak>0?"You made a start recently":"A fresh start is waiting"}</p></div>
         </section>
 
         <nav className="tabs glass" aria-label="Main sections">
@@ -263,7 +267,7 @@ export default function App() {
           <div className="glass encouragement"><Sparkles/><p>“Proud of the start. One step at a time.”</p></div>
         </section>}
 
-        {showSettings && <div className="settings-popover glass"><div className="popover-head"><strong>Your space</strong><button className="quiet-icon" onClick={()=>setShowSettings(false)} aria-label="Close settings"><X/></button></div><p>Tasks are saved on this device. Sign-in, cross-device sync, and cloud buddy invitations need Supabase configuration.</p><button className="secondary-button full-button" onClick={()=>{setTasks(seedTasks);setPoints(120);setShowSettings(false);setToast("Demo tasks restored.");}}>Restore sample tasks</button></div>}
+        {showSettings && <div className="settings-popover glass"><div className="popover-head"><strong>Your space</strong><button className="quiet-icon" onClick={()=>setShowSettings(false)} aria-label="Close settings"><X/></button></div><p>Tasks are saved on this device. Sign-in, cross-device sync, and cloud buddy invitations need Supabase configuration.</p><button className="secondary-button full-button" onClick={()=>{setTasks(seedTasks);setPoints(120);setActivityDays([]);setShowSettings(false);setToast("Demo tasks restored.");}}>Restore sample tasks</button></div>}
         <footer className="bottom-note">YOUR PLACE IS SAVED. NO CATCHING UP NEEDED.</footer>
       </div>
     </section>
