@@ -61,13 +61,13 @@ button,input,textarea,select{font:inherit}button{cursor:pointer;color:inherit}bu
 .task-main p{font-size:calc(22 * var(--u));font-weight:400;line-height:1.2;margin:0;color:var(--text-6)}
 .task-chevron{border:0;background:transparent;color:var(--icon-muted);padding:0;display:grid;place-items:center}
 .task-chevron svg{width:calc(32 * var(--u));height:calc(32 * var(--u))}
-.task-card.is-sliding-away{pointer-events:none;animation:task-slide-away .34s cubic-bezier(.22,.72,.2,1) forwards}
+.task-card.is-sliding-away{pointer-events:none;animation:task-slide-away .36s cubic-bezier(.22,.72,.2,1) forwards}
 @keyframes task-slide-away{0%{opacity:1;transform:translateX(0);max-height:calc(150 * var(--u))}65%{opacity:.24;transform:translateX(110%)}100%{opacity:0;transform:translateX(120%);max-height:0;padding-top:0;padding-bottom:0;margin:0;border-width:0;min-height:0}}
 .completed-section{margin-top:calc(22 * var(--u))}
 .completed-section .eyebrow{font-size:calc(16 * var(--u));color:#777;margin:0 0 calc(8 * var(--u))}
 .completed-list{display:grid;gap:calc(8 * var(--u))}
 .completed-task{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:calc(12 * var(--u)) calc(18 * var(--u));border-radius:9999px;background:#080808;border:1px solid var(--line-faint)}
-.completed-task>span{display:flex;align-items:center;gap:calc(12 * var(--u));min-width:0;color:var(--text-done);font-size:calc(22 * var(--u))}
+.completed-task>span{display:flex;align-items:center;gap:calc(12 * var(--u));min-width:0;color:var(--text-done);font-size:calc(22 * var(--u));text-decoration:none}
 .completed-task svg{flex:none;color:#aaa}
 .quiet-icon{width:calc(40 * var(--u));height:calc(40 * var(--u));border:0;background:transparent;color:#aaa;display:grid;place-items:center}
 .empty-state{text-align:center;color:#aaa;padding:calc(35 * var(--u)) 10px}
