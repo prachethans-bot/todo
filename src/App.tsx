@@ -10,7 +10,7 @@ import { LocalNotifications } from "@capacitor/local-notifications";
 
 type Task = {
   id: string; title: string; step: string; createdAt: string; completed: boolean;
-  reminderAt: string; note: string; estimate: number;
+  reminderAt: string; reminderFired?: boolean; note: string; estimate: number;
 };
 type PlanStep = { id: string; title: string; minutes: number; kind: "setup" | "focus" | "reset" | "wrap"; done: boolean };
 type Tab = "today" | "plan" | "buddy";
@@ -93,6 +93,25 @@ export default function App() {
     return () => window.clearInterval(id);
   }, [running, planRunning]);
   useEffect(() => {
+    if (Capacitor.isNativePlatform()) return;
+    const checkDue = () => {
+      const due = tasks.filter(t => !t.completed && t.reminderAt && !t.reminderFired && new Date(t.reminderAt).getTime() <= Date.now());
+      if (!due.length) return;
+      const dueIds = new Set(due.map(t => t.id));
+      setTasks(current => current.map(t => dueIds.has(t.id) ? { ...t, reminderFired: true } : t));
+      for (const task of due) {
+        setToast(`A small step is waiting: ${task.title}`);
+        if ("Notification" in window && Notification.permission === "granted") {
+          try { new Notification("A small step is waiting", { body: task.title }); } catch { /* Browser notification unavailable. */ }
+        }
+      }
+    };
+    checkDue();
+    const id = window.setInterval(checkDue, 4000);
+    return () => window.clearInterval(id);
+  }, [tasks]);
+
+  useEffect(() => {
     if (!toast) return;
     const id = window.setTimeout(() => setToast(""), 3200);
     return () => window.clearTimeout(id);
@@ -120,7 +139,7 @@ export default function App() {
     e.preventDefault();
     const clean = title.trim();
     if (!clean) { setToast("Add a task name first."); return; }
-    const task: Task = { id: crypto.randomUUID(), title: clean, step: makeStep(clean), createdAt: new Date().toISOString(), completed: false, reminderAt: reminder, note: "", estimate: 15 };
+    const task: Task = { id: crypto.randomUUID(), title: clean, step: makeStep(clean), createdAt: new Date().toISOString(), completed: false, reminderAt: reminder, reminderFired: false, note: "", estimate: 15 };
     setTasks(v => [task, ...v]); setTitle(""); setReminder(""); setToast("Your task is here. Start whenever you’re ready.");
     void scheduleReminder(task);
   }
