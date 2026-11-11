@@ -48,7 +48,7 @@ try {
   if (!(await task.getAttribute("class")).includes("is-complete")) throw new Error("Checkbox did not complete the task immediately");
   const pointsAfter = Number((await page.locator(".stat-card").first().locator("strong").innerText()).match(/\d+/)?.[0] ?? 0);
   if (pointsAfter - pointsBefore !== 10 && pointsAfter - pointsBefore !== 35) throw new Error("Expected +10 points or +35 with bonus");
-  await task.getByRole("button", { name: "Undo" }).click();
+  await task.getByRole("button", { name: "Undo", exact: true }).click();
   if ((await task.getAttribute("class")).includes("is-complete")) throw new Error("Undo did not restore the task");
 
   // Focus session and editable progress note
