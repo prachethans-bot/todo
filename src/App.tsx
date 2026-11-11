@@ -234,7 +234,15 @@ export default function App() {
     setToast("Task moved back to today.");
   }
   function startFocus(id: string) { setFocusTask(id); setRemaining(focusMinutes * 60); setRunning(true); setFocusNote(""); }
-  function stopFocus() { setRunning(false); setFocusTask(null); setRemaining(0); setToast("Your place is saved."); }
+  async function stopFocus() {
+    setRunning(false);
+    if (supabase && session && focusTask && focusNote.trim()) {
+      const { error } = await supabase.from("tasks").update({ progress_note: focusNote.trim() }).eq("id", focusTask);
+      setTasks(v => v.map(t => t.id === focusTask ? { ...t, note: focusNote.trim() } : t));
+      if (error) setToast("Your note is saved locally, but cloud sync failed.");
+    }
+    setFocusTask(null); setRemaining(0); setToast("Your place is saved.");
+  }
   async function newSmallerStep(id: string) {
     const task = tasks.find(t => t.id === id); if (!task) return;
     const step = await askAssistant(task.title, "TOO_HARD");
@@ -259,7 +267,14 @@ export default function App() {
     try { if (navigator.share) await navigator.share({ text: message }); else { await navigator.clipboard.writeText(message); setToast("Progress copied to clipboard."); } }
     catch { setToast("Sharing was cancelled."); }
   }
-  function saveBuddy(e: FormEvent) { e.preventDefault(); if (!buddyName.trim() || !buddyCode.trim()) { setToast("Add a name and invite code."); return; } localStorage.setItem("vinai.buddy.local", JSON.stringify({ name: buddyName.trim(), code: buddyCode.trim() })); setToast("Buddy details saved on this device. Cloud invites need Supabase setup."); }
+  function saveBuddy(e: FormEvent) { e.preventDefault(); if (!buddyName.trim() || !buddyCode.trim()) { setToast("Add a name and invite code."); return; } localStorage.setItem("vinai.buddy.local", JSON.stringify({ name: buddyName.trim(), code: buddyCode.trim() })); setToast("Buddy details saved on this device."); }
+
+  if (!authReady) return <main className="app-bg"><section className="auth-card glass"><div className="brand-word" lang="ta">வினை</div><p>Getting your space ready…</p></section></main>;
+  if (hasSupabaseConfig && !session) return <main className="app-bg"><div className="desktop-glow"/><section className="auth-card glass">
+    <div className="auth-mark" lang="ta">வினை</div><p className="eyebrow">YOUR PACE. YOUR SPACE.</p><h1>{authMode === "signin" ? "Welcome back." : "Make room for a fresh start."}</h1><p className="muted-copy">Your tasks stay connected to your account, across your devices.</p>
+    <form onSubmit={handleAuth}><label htmlFor="auth-email">Email address</label><input id="auth-email" type="email" autoComplete="email" required value={authEmail} onChange={e=>setAuthEmail(e.target.value)} placeholder="you@example.com"/><label htmlFor="auth-password">Password</label><input id="auth-password" type="password" minLength={6} autoComplete={authMode === "signin" ? "current-password" : "new-password"} required value={authPassword} onChange={e=>setAuthPassword(e.target.value)} placeholder="At least 6 characters"/><button className="primary-button full-button" disabled={authBusy}>{authBusy ? "Please wait…" : authMode === "signin" ? "Sign in" : "Create account"} <ArrowRight size={16}/></button></form>
+    {authMessage && <p className="auth-message" role="status">{authMessage}</p>}<button className="text-button" onClick={()=>{setAuthMode(v=>v==="signin"?"signup":"signin");setAuthMessage("");}}>{authMode === "signin" ? "New here? Create an account" : "Already have an account? Sign in"}</button>
+  </section></main>;
 
   return <main className="app-bg">
     <div className="desktop-glow" />
@@ -305,7 +320,7 @@ export default function App() {
 
           <div className="task-list">
             {tasks.map((task, index) => <article className={`glass task-card ${task.completed?"is-complete":""}`} key={task.id}>
-              <div className="task-top"><button className="check-button" aria-label={task.completed?"Undo completion":"Complete task"} onClick={()=>task.completed?undoTask(task.id):completeTask(task.id)}>{task.completed?<Check size={17}/>:null}</button><span className="task-index">{String(index+1).padStart(2,"0")}</span><div className="task-main"><h3>{task.title}</h3><p><Sparkles size={13}/>{task.step}</p></div><button className="quiet-icon" aria-label="Delete task" onClick={()=>{setTasks(v=>v.filter(t=>t.id!==task.id));setToast("Task removed.");}}><Trash2 size={15}/></button></div>
+              <div className="task-top"><button className="check-button" aria-label={task.completed?"Undo completion":"Complete task"} onClick={()=>task.completed?undoTask(task.id):completeTask(task.id)}>{task.completed?<Check size={17}/>:null}</button><span className="task-index">{String(index+1).padStart(2,"0")}</span><div className="task-main"><h3>{task.title}</h3><p><Sparkles size={13}/>{task.step}</p></div><button className="quiet-icon" aria-label="Delete task" onClick={async ()=>{setTasks(v=>v.filter(t=>t.id!==task.id));if(supabase&&session){const {error}=await supabase.from("tasks").delete().eq("id",task.id);if(error)setToast("Removed locally; cloud delete failed.");}setToast("Task removed.");}}><Trash2 size={15}/></button></div>
               {!task.completed && <div className="task-actions"><button onClick={()=>newSmallerStep(task.id)}><CircleHelp size={14}/> Too hard</button><button onClick={()=>startFocus(task.id)}><Play size={14}/> Focus</button>{task.reminderAt && <span><AlarmClock size={13}/>{new Date(task.reminderAt).toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit"})}</span>}</div>}
               {task.completed && <div className="task-actions"><span><CheckCircle2 size={14}/> Completed</span><button onClick={()=>undoTask(task.id)}><RotateCcw size={13}/> Undo</button></div>}
             </article>)}
@@ -347,7 +362,7 @@ export default function App() {
           <div className="glass encouragement"><Sparkles/><p>“Proud of the start. One step at a time.”</p></div>
         </section>}
 
-        {showSettings && <div className="settings-popover glass"><div className="popover-head"><strong>Your space</strong><button className="quiet-icon" onClick={()=>setShowSettings(false)} aria-label="Close settings"><X/></button></div><p>Tasks are saved on this device. Sign-in, cross-device sync, and cloud buddy invitations need Supabase configuration.</p><button className="secondary-button full-button" onClick={()=>{setTasks(seedTasks);setPoints(120);setActivityDays([]);setShowSettings(false);setToast("Demo tasks restored.");}}>Restore sample tasks</button></div>}
+        {showSettings && <div className="settings-popover glass"><div className="popover-head"><strong>Your space</strong><button className="quiet-icon" onClick={()=>setShowSettings(false)} aria-label="Close settings"><X/></button></div><p>{session ? `Signed in as ${session.user.email ?? "your account"}. Your tasks sync through your private account.` : "Demo mode stores tasks on this device."}</p>{session && <button className="secondary-button full-button" onClick={async ()=>{await supabase?.auth.signOut();setShowSettings(false);}}>Sign out</button>}</div>}
         <footer className="bottom-note">YOUR PLACE IS SAVED. NO CATCHING UP NEEDED.</footer>
       </div>
     </section>
