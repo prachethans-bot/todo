@@ -56,6 +56,16 @@ function buildPlan(task: string, total: number): PlanStep[] {
     { id: crypto.randomUUID(), title: "Save your next step", minutes: wrap, kind: "wrap", done: false }
   ];
 }
+
+function ZapIcon(){return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 10-13h-7z" fill="currentColor"/></svg>}
+function ChartIcon(){return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V11h4v8M10 19V5h4v14M16 19v-9h4v9" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>}
+function StarIcon(){return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 3 6.2 6.8 1-4.9 4.8 1.2 6.8L12 17.6l-6.1 3.2 1.2-6.8-4.9-4.8 6.8-1z" fill="currentColor"/></svg>}
+function SunIcon(){return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" strokeWidth="1.8"/><path d="M12 1v3m0 16v3M1 12h3m16 0h3M4.2 4.2l2.1 2.1m11.4 11.4 2.1 2.1m0-15.6-2.1 2.1M6.3 17.7l-2.1 2.1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>}
+function CalendarIcon(){return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8"/><path d="M7 3v4m10-4v4M3 10h18m-13 4h3m3 0h3m-9 3h3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>}
+function HomeIcon(){return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z" fill="currentColor"/></svg>}
+function ClockIcon(){return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2"/><path d="M12 6v6l4 2" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>}
+function UsersIcon(){return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5" fill="currentColor"/><path d="M2 20c0-3.5 2.8-6 7-6s7 2.5 7 6M16 5a3.5 3.5 0 0 1 0 6.8M18 14c2.5.8 4 2.7 4 5.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>}
+
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>(() => {
     try { const saved = localStorage.getItem(STORE); return saved ? JSON.parse(saved).tasks ?? [] : []; }
@@ -85,6 +95,7 @@ export default function App() {
   const [rewardBurst, setRewardBurst] = useState(false);
   const [slidingTaskId, setSlidingTaskId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showAddTask, setShowAddTask] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(!hasSupabaseConfig);
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
@@ -351,96 +362,86 @@ export default function App() {
   </section></main>;
 
   return <main className="app-bg">
-    <div className="desktop-glow" />
     <section className="phone-frame" aria-label="வினை application">
       <div className="screen" id="main-content">
-        <header className="topbar">
-          <div className="brand-lockup">
-            <div className="brand-mark"><img src="/vinai-icon.svg" alt="" onError={e => { (e.currentTarget as HTMLImageElement).style.display="none"; }} /><span lang="ta">வினை</span></div>
-            <div><div className="brand-word" lang="ta">வினை</div><div className="date-label">{today}</div></div>
-          </div>
-          <button className="icon-button" aria-label="Settings" onClick={() => setShowSettings(v => !v)}><UserRound size={18}/></button>
-        </header>
+        <div className="scroll-column">
+          <header className="topbar">
+            <div className="brand-lockup">
+              <div className="brand-mark"><span lang="ta">வினை</span></div>
+              <div className="brand-word" lang="ta">வினை</div>
+            </div>
+            <div className="header-actions">
+              <button className="icon-button notification-button" aria-label="Notifications"><Bell size={21}/><i/></button>
+              <button className="icon-button profile-button" aria-label="Your profile" onClick={()=>setShowSettings(v=>!v)}><UserRound size={21}/></button>
+            </div>
+          </header>
 
-        <section className="welcome">
-          <p className="eyebrow">YOUR PACE. YOUR SPACE.</p>
-          <h1>Small steps.<br/><span>Real momentum.</span></h1>
-        </section>
+          {tab === "today" && <>
+            <section className="hero-section">
+              <div className="hero-copy">
+                <h1>One small<br/><strong>step.</strong></h1>
+                <p className="hero-subtitle">That’s enough.</p>
+                <div className="hero-divider"/>
+                <div className="hero-chips">
+                  <span><ZapIcon/>Focus Better</span>
+                  <span><ChartIcon/>Get Things Done</span>
+                  <span><StarIcon/>Grow Your Streak</span>
+                </div>
+              </div>
+              <div className="hero-art"><div className="moon"/><img src="/stay-hard-hero.jpg" alt="Smiling illustrated character in a straw hat"/><div className="art-fade"/></div>
+            </section>
 
-        <section className="hero-poster" aria-label="Vinai hero artwork">
-          <img src="/vinai-hero.jpg" alt="Smiling illustrated pirate character wearing a straw hat against a red background" />
-          <div className="task-count"><strong>{openTasks.length}</strong><span>left today</span></div>
-        </section>
+            <section className="today-card" id="workspace">
+              <div className="today-heading"><div className="today-label"><SunIcon/><h2>Today</h2></div><div className="date-label">{new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})}<CalendarIcon/></div></div>
+              <div className="task-list">
+                {openTasks.map((task,index)=><article className={`task-card ${slidingTaskId===task.id?"is-sliding-away":""}`} key={task.id}>
+                  <div className="task-top"><button className="check-button" aria-label="Complete task" onClick={()=>completeTask(task.id)} disabled={slidingTaskId!==null}/><div className="task-main"><h3>{task.title}</h3><p>{task.step || "Small step. Big difference."}</p></div><button className="task-chevron" aria-label="Task options" onClick={()=>startFocus(task.id)}><ChevronRight size={23}/></button></div>
+                </article>)}
+                {openTasks.length===0 && <div className="empty-state"><Sparkles/><h3>Nothing waiting here.</h3><p>Add one small thing whenever it comes to mind.</p></div>}
+              </div>
+              {tasks.some(t=>t.completed) && <section className="completed-section"><p className="eyebrow">COMPLETED · {completed}</p><div className="completed-list">{tasks.filter(t=>t.completed).map(task=><div className="completed-task" key={task.id}><span><CheckCircle2 size={15}/>{task.title}</span><button className="quiet-icon" aria-label="Undo completion" onClick={()=>undoTask(task.id)}><RotateCcw size={15}/></button></div>)}</div></section>}
+            </section>
+          </>}
 
-        <section className="stats-grid">
-          <div className="glass stat-card"><span className="eyebrow">YOUR POINTS</span><strong>{points} <small>pts</small></strong><p>Every small win counts</p></div>
-          <div className="glass stat-card"><span className="eyebrow">SHOWING UP</span><strong><Flame size={18}/> {streak} <small>day{streak===1?"":"s"}</small></strong><p>{streak>0?"You made a start recently":"A fresh start is waiting"}</p></div>
-        </section>
-
-        <nav className="tabs glass" aria-label="Main sections">
-          <button className={tab==="today"?"selected":""} onClick={() => setTab("today")}>Today</button>
-          <button className={tab==="plan"?"selected":""} onClick={() => setTab("plan")}>Timed plan</button>
-          <button className={tab==="buddy"?"selected":""} onClick={() => setTab("buddy")}>My buddy</button>
-        </nav>
-
-        {tab === "today" && <section className="content-section" id="workspace">
-          <div className="section-title"><div><p className="eyebrow">A SOFTER TO-DO LIST</p><h2>Today, one thing at a time.</h2></div><span className="task-progress">{completed}/{tasks.length}</span></div>
-          <form className="glass quick-add" onSubmit={addTask}>
-            <label htmlFor="task-title">What needs your focus?</label>
-            <div className="input-row"><Plus size={18}/><input id="task-title" value={title} onChange={e=>setTitle(e.target.value)} placeholder="Add one thing to your mind…" maxLength={180}/></div>
-            <div className="add-bottom"><label className="reminder-field"><Bell size={15}/><input aria-label="Optional reminder" type="datetime-local" value={reminder} min={localInputDate(new Date())} onChange={e=>setReminder(e.target.value)}/></label><button className="primary-button" type="submit">Add task <ArrowRight size={15}/></button></div>
-          </form>
-
-          <div className="task-list">
-            {openTasks.map((task, index) => <article className={`glass task-card ${slidingTaskId===task.id?"is-sliding-away":""}`} key={task.id}>
-              <div className="task-top"><button className="check-button" aria-label="Complete task" onClick={()=>completeTask(task.id)} disabled={slidingTaskId!==null}>{null}</button><span className="task-index">{String(index+1).padStart(2,"0")}</span><div className="task-main"><h3>{task.title}</h3><p><Sparkles size={13}/>{task.step}</p></div><button className="quiet-icon" aria-label="Delete task" onClick={async ()=>{setTasks(v=>v.filter(t=>t.id!==task.id));if(supabase&&session){const {error}=await supabase.from("tasks").delete().eq("id",task.id);if(error)setToast("Removed locally; cloud delete failed.");}setToast("Task removed.");}}><Trash2 size={15}/></button></div>
-              <div className="task-actions"><button onClick={()=>newSmallerStep(task.id)}><CircleHelp size={14}/> Too hard</button><button onClick={()=>startFocus(task.id)}><Play size={14}/> Focus</button>{task.reminderAt && <span><AlarmClock size={13}/>{new Date(task.reminderAt).toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit"})}</span>}</div>
-            </article>)}
-            {openTasks.length===0 && <div className="empty-state glass"><Sparkles/><h3>Nothing waiting here.</h3><p>Add one small thing whenever it comes to mind.</p></div>}
-          </div>
-          {tasks.some(t=>t.completed) && <section className="completed-section"><p className="eyebrow">ALREADY DONE · {tasks.filter(t=>t.completed).length}</p><div className="completed-list">{tasks.filter(t=>t.completed).map(task=><div className="completed-task glass" key={task.id}><span><CheckCircle2 size={14}/>{task.title}</span><button className="quiet-icon" aria-label="Undo completion" onClick={()=>undoTask(task.id)}><RotateCcw size={14}/></button></div>)}</div></section>}
-
-          {focusTask && <section className="glass focus-panel">
-            <div className="focus-head"><div><p className="eyebrow">FOCUS SPACE</p><h2>{activeTask?.title ?? "A little focus time"}</h2></div><button className="quiet-icon" aria-label="Close focus" onClick={stopFocus}><X/></button></div>
-            <p className="focus-step">{activeTask?.step}</p>
-            <div className="timer-display">{fmt(remaining)}</div>
-            <div className="focus-controls"><button className="primary-button" onClick={()=>setRunning(v=>!v)}>{running?<Pause size={16}/>:<Play size={16}/>} {running?"Pause":"Resume"}</button><button className="secondary-button" onClick={stopFocus}><Square size={14}/> Stop</button></div>
-            <label className="note-label">A note to your future self<textarea value={focusNote} onChange={e=>setFocusNote(e.target.value)} placeholder="Where should you pick up again?"/></label>
-            <button className="text-button" onClick={()=>activeTask && newSmallerStep(activeTask.id)}>Need a smaller step?</button>
+          {tab === "plan" && <section className="secondary-screen">
+            <p className="eyebrow">A LITTLE STRUCTURE. PLENTY OF BREATHING ROOM.</p><h2>Build a timed plan</h2><p className="muted-copy">Break the thing taking up space in your head into a few manageable parts.</p>
+            <form className="glass planner-card" onSubmit={createPlan}>
+              <label htmlFor="plan-task">What would you like to work on?</label><textarea id="plan-task" value={planText} onChange={e=>setPlanText(e.target.value)} placeholder="The task taking up space in your head…"/>
+              <div className="range-heading"><label htmlFor="plan-time">Total time</label><strong>{planMinutes<60?`${planMinutes} min`:`${Math.floor(planMinutes/60)}h ${planMinutes%60?planMinutes%60+"m":""}`}</strong></div>
+              <input id="plan-time" className="silver-range" type="range" min="15" max="240" step="5" value={planMinutes} onChange={e=>setPlanMinutes(Number(e.target.value))}/><div className="range-labels"><span>15 min</span><span>4 hours</span></div>
+              <button className="primary-button full-button" type="submit" disabled={planLoading}>{planLoading?"Building your plan…":"Create my plan"} <ArrowRight size={16}/></button>
+            </form>
+            {planSteps.length>0 && <section className="glass generated-plan"><div className="section-title"><div><p className="eyebrow">YOUR PLAN</p><h3>{planText}</h3></div><span className="task-progress">{planSteps.filter(x=>x.done).length}/{planSteps.length}</span></div>
+              <p className="muted-copy">Planned total: {planTotal} minutes</p>
+              {planSteps.map((step,i)=><div className={`plan-step ${step.done?"done":""}`} key={step.id}><span className="step-number">{String(i+1).padStart(2,"0")}</span><div className="step-edit"><input aria-label="Step title" value={step.title} onChange={e=>setPlanSteps(v=>v.map(x=>x.id===step.id?{...x,title:e.target.value}:x))}/><span>{step.kind}</span></div><input className="minutes-input" aria-label="Step minutes" type="number" min="1" max="240" value={step.minutes} onChange={e=>setPlanSteps(v=>v.map(x=>x.id===step.id?{...x,minutes:Math.max(1,Number(e.target.value)||1)}:x))}/><button className="quiet-icon" onClick={()=>setPlanSteps(v=>v.map(x=>x.id===step.id?{...x,done:!x.done}:x))}>{step.done?<CheckCircle2/>:<Check/>}</button></div>)}
+              {currentStep && <div className="plan-execution"><span className="eyebrow">CURRENT STEP</span><h3>{currentStep.title}</h3><div className="timer-display">{fmt(planRemaining)}</div><div className="focus-controls"><button className="primary-button" onClick={()=>planRunning?setPlanRunning(false):planRemaining>0?setPlanRunning(true):startPlan()}>{planRunning?"Pause":planRemaining>0?"Resume":"Start step"}</button><button className="secondary-button" onClick={finishPlanStep}>Skip / finish</button></div></div>}
+            </section>}
           </section>}
-          <div className="focus-preset glass"><div><span className="eyebrow">FOCUS LENGTH</span><p>A little time, just for this.</p></div><select value={focusMinutes} onChange={e=>setFocusMinutes(Number(e.target.value))}><option value={5}>5 min</option><option value={10}>10 min</option><option value={15}>15 min</option><option value={25}>25 min</option></select></div>
-        </section>}
 
-        {tab === "plan" && <section className="content-section">
-          <p className="eyebrow">A LITTLE STRUCTURE. PLENTY OF BREATHING ROOM.</p><h2>Build a timed plan</h2><p className="muted-copy">Break the thing taking up space in your head into a few manageable parts.</p>
-          <form className="glass planner-card" onSubmit={createPlan}>
-            <label htmlFor="plan-task">What would you like to work on?</label><textarea id="plan-task" value={planText} onChange={e=>setPlanText(e.target.value)} placeholder="The task taking up space in your head…"/>
-            <div className="range-heading"><label htmlFor="plan-time">Total time</label><strong>{planMinutes<60?`${planMinutes} min`:`${Math.floor(planMinutes/60)}h ${planMinutes%60?planMinutes%60+"m":""}`}</strong></div>
-            <input id="plan-time" className="silver-range" type="range" min="15" max="240" step="5" value={planMinutes} onChange={e=>setPlanMinutes(Number(e.target.value))}/><div className="range-labels"><span>15 min</span><span>4 hours</span></div>
-            <button className="primary-button full-button" type="submit" disabled={planLoading}>{planLoading ? "Building your plan…" : "Create my plan"} <ArrowRight size={16}/></button>
-          </form>
-          {planSteps.length>0 && <section className="glass generated-plan"><div className="section-title"><div><p className="eyebrow">YOUR PLAN</p><h3>{planText}</h3></div><span className="task-progress">{planSteps.filter(s=>s.done).length}/{planSteps.length}</span></div>
-            <p className="muted-copy">Planned total: {planTotal} minutes {planTotal!==planMinutes && "· Adjusted durations"}</p>
-            {planSteps.map((step,i)=><div className={`plan-step ${step.done?"done":""}`} key={step.id}><span className="step-number">{String(i+1).padStart(2,"0")}</span><div className="step-edit"><input aria-label="Step title" value={step.title} onChange={e=>setPlanSteps(v=>v.map(s=>s.id===step.id?{...s,title:e.target.value}:s))}/><span>{step.kind}</span></div><input className="minutes-input" aria-label="Step minutes" type="number" min="1" max="240" value={step.minutes} onChange={e=>setPlanSteps(v=>v.map(s=>s.id===step.id?{...s,minutes:Math.max(1,Number(e.target.value)||1)}:s))}/><button className="quiet-icon" aria-label={step.done?"Step complete":"Mark step complete"} onClick={()=>setPlanSteps(v=>v.map(s=>s.id===step.id?{...s,done:!s.done}:s))}>{step.done?<CheckCircle2/>:<Check/>}</button></div>)}
-            <p className="plan-status">{planTotal===planMinutes?"Your steps add up to the selected time.":`Your steps now total ${planTotal} minutes. Balance them if you want.`}</p>
-            {currentStep && <div className="plan-execution"><div><span className="eyebrow">CURRENT STEP</span><h3>{currentStep.title}</h3></div><div className="timer-display small-timer">{fmt(planRemaining)}</div><div className="focus-controls"><button className="primary-button" onClick={()=>planRunning?setPlanRunning(false):planRemaining>0?setPlanRunning(true):startPlan()}>{planRunning?<Pause/>:<Play/>}{planRunning?"Pause":planRemaining>0?"Resume":"Start step"}</button><button className="secondary-button" onClick={finishPlanStep}>Skip / finish <ChevronRight/></button></div></div>}
-            {!currentStep && <p className="plan-status">You reached the end. Any progress counts.</p>}
+          {tab === "buddy" && <section className="secondary-screen">
+            <p className="eyebrow">BETTER, TOGETHER</p><h2>Your accountability buddy</h2><p className="muted-copy">Not a report card. A friend in your corner. Share a small win, or ask for a little company.</p>
+            <div className="glass buddy-card"><div className="buddy-symbol"><UserRound size={24}/></div><h3>A little company can help.</h3><p>Invite someone you trust. They can see only the focus status and task label you choose to share, not your task list or notes.</p>
+              {!localBuddy?<form onSubmit={createBuddyInvite}><label htmlFor="buddy-name">Buddy name</label><input id="buddy-name" value={buddyName} onChange={e=>setBuddyName(e.target.value)} placeholder="A name you know"/><button className="primary-button full-button" disabled={!session}>Create private invite <ArrowRight size={16}/></button>{!session&&<p className="buddy-hint">Sign in to create an invite.</p>}</form>:<div className="buddy-invite"><p className="buddy-hint">Invite for {localBuddy.ownerName}</p><input aria-label="Buddy invitation link" readOnly value={buddyLink||buildInviteLink(localBuddy.token)}/><button className="primary-button full-button" onClick={()=>void copyBuddyInvite()}>Copy invite link <Share2 size={15}/></button><div className="buddy-manage"><button className="secondary-button" onClick={()=>void changeBuddyState(localBuddy.state==="paused"?"active":"paused")}>{localBuddy.state==="paused"?"Resume sharing":"Pause sharing"}</button><button className="secondary-button" onClick={()=>void changeBuddyState("removed")}>Remove buddy</button></div></div>}
+            </div><button className="secondary-button full-button share-button" onClick={shareProgress}><Share2 size={16}/> Share a small progress check-in</button>
           </section>}
-        </section>}
 
-        {tab === "buddy" && <section className="content-section">
-          <p className="eyebrow">BETTER, TOGETHER</p><h2>Your accountability buddy</h2><p className="muted-copy">Not a report card. A friend in your corner. Share a small win, or ask for a little company.</p>
-          <div className="glass buddy-card"><div className="buddy-symbol"><UserRound size={24}/></div><h3>A little company can help.</h3><p>Invite someone you trust. They can see only the focus status and task label you choose to share, not your task list or notes.</p>
-            {!localBuddy ? <form onSubmit={createBuddyInvite}><label htmlFor="buddy-name">Buddy name</label><input id="buddy-name" value={buddyName} onChange={e=>setBuddyName(e.target.value)} placeholder="A name you know"/><button className="primary-button full-button" disabled={!session}>Create private invite <ArrowRight size={16}/></button>{!session && <p className="buddy-hint">Sign in to create an invite.</p>}</form> : <div className="buddy-invite"><p className="buddy-hint">Invite for {localBuddy.ownerName}</p><input aria-label="Buddy invitation link" readOnly value={buddyLink || buildInviteLink(localBuddy.token)}/><button className="primary-button full-button" onClick={()=>void copyBuddyInvite()}>Copy invite link <Share2 size={15}/></button><div className="buddy-manage"><button className="secondary-button" onClick={()=>void changeBuddyState(localBuddy.state==="paused"?"active":"paused")}>{localBuddy.state==="paused"?"Resume sharing":"Pause sharing"}</button><button className="secondary-button" onClick={()=>void changeBuddyState("removed")}>Remove buddy</button></div></div>}</div>
-          <button className="secondary-button full-button share-button" onClick={shareProgress}><Share2 size={16}/> Share a small progress check-in</button>
-          <div className="glass encouragement"><Sparkles/><p>“Proud of the start. One step at a time.”</p></div>
-        </section>}
+          {focusTask && <section className="glass focus-panel"><div className="focus-head"><div><p className="eyebrow">FOCUS SPACE</p><h2>{activeTask?.title??"A little focus time"}</h2></div><button className="quiet-icon" aria-label="Close focus" onClick={stopFocus}><X/></button></div><p className="focus-step">{activeTask?.step}</p><div className="timer-display">{fmt(remaining)}</div><div className="focus-controls"><button className="primary-button" onClick={()=>setRunning(v=>!v)}>{running?<Pause/>:<Play/>}{running?"Pause":"Resume"}</button><button className="secondary-button" onClick={stopFocus}><Square/> Stop</button></div><label className="note-label">A note to your future self<textarea value={focusNote} onChange={e=>setFocusNote(e.target.value)} placeholder="Where should you pick up again?"/></label></section>}
+        </div>
 
-        {showSettings && <div className="settings-popover glass"><div className="popover-head"><strong>Your space</strong><button className="quiet-icon" onClick={()=>setShowSettings(false)} aria-label="Close settings"><X/></button></div><p>{session ? `Signed in as ${session.user.email ?? "your account"}. Your tasks sync through your private account.` : "Demo mode stores tasks on this device."}</p>{session && <button className="secondary-button full-button" onClick={async ()=>{await supabase?.auth.signOut();setShowSettings(false);}}>Sign out</button>}</div>}
-        <footer className="bottom-note">YOUR PLACE IS SAVED. NO CATCHING UP NEEDED.</footer>
+        {showAddTask && <div className="add-sheet-backdrop" onClick={()=>setShowAddTask(false)}><form className="add-sheet glass" onClick={e=>e.stopPropagation()} onSubmit={async e=>{await addTask(e);setShowAddTask(false);}}><div className="sheet-grip"/><div className="sheet-heading"><h2>Add a Task</h2><button type="button" className="quiet-icon" onClick={()=>setShowAddTask(false)} aria-label="Close"><X/></button></div><label htmlFor="task-title">What’s one small thing?</label><input id="task-title" value={title} onChange={e=>setTitle(e.target.value)} placeholder="Add one thing to your mind…" maxLength={180}/><label className="reminder-field"><Bell size={15}/> Reminder <input aria-label="Optional reminder" type="datetime-local" value={reminder} min={localInputDate(new Date())} onChange={e=>setReminder(e.target.value)}/></label><button className="primary-button full-button" type="submit">Add task <ArrowRight size={16}/></button></form></div>}
+
+        <div className="bottom-stack"><button className="add-task-button" onClick={()=>setShowAddTask(true)}><Plus size={28}/>Add a Task</button>
+          <nav className="bottom-nav" aria-label="Main sections">
+            <button className={tab==="today"?"active":""} onClick={()=>setTab("today")}><HomeIcon/><span>Today</span></button>
+            <button className={tab==="plan"?"active":""} onClick={()=>setTab("plan")}><ClockIcon/><span>Timed Plan</span></button>
+            <button className={tab==="buddy"?"active":""} onClick={()=>setTab("buddy")}><UsersIcon/><span>My Buddy</span></button>
+          </nav>
+        </div>
+        {showSettings && <div className="settings-popover glass"><div className="popover-head"><strong>Your space</strong><button className="quiet-icon" onClick={()=>setShowSettings(false)} aria-label="Close settings"><X/></button></div><p>{session? `Signed in as ${session.user.email??"your account"}. Your tasks sync through your private account.`:"Demo mode stores tasks on this device."}</p>{session&&<button className="secondary-button full-button" onClick={async()=>{await supabase?.auth.signOut();setShowSettings(false);}}>Sign out</button>}</div>}
       </div>
     </section>
     {rewardBurst && <div className="reward-burst" aria-hidden="true"><span>✦</span><span>✧</span><span>✦</span><span>✧</span><span>✦</span></div>}
     {toast && <div className="toast" role="status">{toast}</div>}
   </main>;
+
 }
