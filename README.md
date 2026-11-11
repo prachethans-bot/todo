@@ -1,37 +1,74 @@
-# வினை (Vinai) — ADHD-friendly task and focus app
+# வினை — fresh application foundation
 
-வினை turns overwhelming tasks into small, clear next actions. The UI uses the monochrome silver-on-black design exported from the supplied Figma Make archive. The original app's task engine, storage, notifications, focus sessions, rewards, buddy flow, Supabase integration, and Capacitor Android shell are preserved.
+A calm, monochrome ADHD-friendly task and focus workspace. This branch is a clean rebuild of the visible product experience while keeping the existing repository's main branch untouched.
 
-## Included features
+## Current implementation
 
-- Four AI helper modes: new task, next step, too hard, and time check, with a local fallback when connected AI is unavailable.
-- Saved tasks with estimates, actual-time feedback, local persistence, and optional authenticated Supabase sync.
-- Native Android scheduled reminders with repeat notifications, snooze, a round clock picker, and a browser-only fallback while the tab is active.
-- A written AI task confirmation screen. It checks the user's update against the saved task and micro-step, rejects unrelated updates, and removes verified tasks from the active list. Camera/photo proof is not included.
-- Focus sessions, adjustable timers, editable next-action and progress notes, check-ins, pause/resume, and focus-completion points.
-- Points, occasional bonus points, streaks, sound, haptics, visual rewards, and undo.
-- Optional accountability-buddy invitations, controlled status sharing, pause/disconnect, and cheers.
-- Timed multi-step planner with editable work/break durations and reminder support.
+- Responsive phone-first interface with a desktop device frame.
+- Tamil wordmark, graphite/silver liquid-glass styling, and monochrome hero poster.
+- Today, Timed plan, and My buddy sections.
+- Local task creation, completion, undo, and deletion.
+- Physical micro-step suggestions, including a smaller response for "Too hard".
+- Focus countdown with pause/resume/stop and a progress note field.
+- Editable timed-plan steps and durations, with a 15–240 minute total-time selector.
+- Local points and timezone-local activity-day streak.
+- Task reminders through Capacitor Local Notifications on Android.
+- Foreground browser reminder checks while the web app is open.
+- Local persistence so tasks remain available after refresh.
 
-## Local development
+## Not yet connected
+
+These are intentionally not represented as finished:
+
+- Supabase sign-in, cloud task synchronization, and cross-device recovery.
+- Server-side AI generation through the `stepwise-assistant` Edge Function.
+- Server-authoritative points ledger and streak transaction.
+- Real buddy invites, relationship permissions, and Supabase Realtime.
+- Full alarm reconciliation, repeat rules, exact-alarm handling, and device-reboot recovery.
+- Two-user RLS verification and real-device notification QA.
+
+The buddy form currently saves a local note only. The task assistant currently uses a deterministic local fallback, not a hosted AI model. Local points and streaks are not tamper-resistant or synced.
+
+## Run locally
+
+Requirements: Node.js 20 or newer.
 
 ```bash
-npm install
+npm ci
 npm run dev
-npm run build
 ```
 
-## Environment
+Create a local `.env` from `.env.example` when Supabase is configured. Do not add service-role keys or provider secrets to Vite environment variables.
 
-Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` for authentication, cloud sync, AI verification, and buddy invites. Provider keys must stay in Supabase Edge Function secrets. The existing functions are `stepwise-assistant` and `verify-task-start`; the latter uses `GEMINI_API_KEY` server-side.
+## Build the web app
 
-## Android APK
+```bash
+npm run build
+npm run preview
+```
 
-The repository contains the Capacitor Android project and GitHub Actions APK workflow. A push to `main` that changes app source or public assets triggers a build, publishes the debug APK artifact, and refreshes the `latest` release asset. Native reminders use Android local notifications and are subject to device notification, exact-alarm, and battery settings.
+A GitHub Actions workflow on this branch runs the production TypeScript/Vite build and uploads the `dist` folder as an artifact.
 
-## Important behavior
+## Android
 
-- Completing a task opens a separate written-confirmation screen, never a camera.
-- A relevant written update is verified server-side, saved as a progress note, and the task slides away from the active list.
-- Unrelated or generic updates are rejected with guidance, leaving the task active.
-- Local task storage is available without signing in. AI verification and cloud buddy features require a configured, signed-in Supabase account.
+The repository includes Capacitor and the Android project. Build the web app first, then:
+
+```bash
+npm run cap:sync
+```
+
+Open the Android project in Android Studio to inspect and build it. Android local notifications depend on OS permission, exact-alarm policy, battery settings, and device-vendor behavior. A local notification is not guaranteed to behave like a dedicated alarm clock.
+
+## Reminder limitations
+
+- Browser timers and notifications are best-effort and only checked while the app is open. Browsers can suspend background tabs.
+- Android local notifications are scheduled through the OS, but exact delivery and audible alarm behavior depend on Android version, permission state, and battery optimization.
+- This branch has not yet been validated on a physical Android device.
+
+## Security and configuration
+
+The `.env.example` contains only public client configuration placeholders. Keep all privileged Supabase keys and AI provider keys in Supabase Edge Function secrets. Do not commit real credentials.
+
+## Verification status
+
+The source has been committed to the `fresh-vinai-foundation` branch. The automated production build is the next verification gate; no claim is made here that Supabase RLS, Edge Functions, offline cloud reconciliation, or physical-device notifications have passed tests.
