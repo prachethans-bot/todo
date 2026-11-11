@@ -83,3 +83,5 @@ jobs:
               --latest
           fi
 
+
+# Build trigger: generate the current Vinai Android APK without changing app source.
