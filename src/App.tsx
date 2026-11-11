@@ -83,6 +83,7 @@ export default function App() {
   const [buddySessionId, setBuddySessionId] = useState("");
   const [toast, setToast] = useState("");
   const [rewardBurst, setRewardBurst] = useState(false);
+  const [slidingTaskId, setSlidingTaskId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(!hasSupabaseConfig);
@@ -240,9 +241,12 @@ export default function App() {
   }
 
   async function completeTask(id: string) {
-    const task = tasks.find(t => t.id === id); if (!task || task.completed) return;
+    const task = tasks.find(t => t.id === id); if (!task || task.completed || slidingTaskId) return;
+    setSlidingTaskId(id);
+    window.setTimeout(async () => {
     const reward = Math.random() < 0.2 ? 35 : 10;
     setTasks(v => v.map(t => t.id === id ? { ...t, completed: true, pointsAwarded: reward } : t));
+    setSlidingTaskId(null);
     setPoints(v => v + reward); setActivityDays(v => [...new Set([...v, dayKey(new Date())])]);
     setRewardBurst(true); window.setTimeout(() => setRewardBurst(false), 650);
     playRewardSound();
@@ -252,6 +256,7 @@ export default function App() {
       if (error) setToast("Saved on this device. Cloud update will retry next time.");
     }
     setToast(reward === 35 ? "Bonus win! +10 points and a +25 bonus." : "A small win. +10 points");
+    }, 300);
   }
   async function undoTask(id: string) {
     const task = tasks.find(t => t.id === id); if (!task || !task.completed) return;
@@ -362,9 +367,8 @@ export default function App() {
           <h1>Small steps.<br/><span>Real momentum.</span></h1>
         </section>
 
-        <section className="hero-poster" aria-label="Motivational poster">
-          
-          <div className="poster-fallback"><span>STAY<br/>HARD</span><small>START WHERE YOU ARE</small></div>
+        <section className="hero-poster" aria-label="Vinai hero artwork">
+          <img src="/vinai-hero.jpg" alt="Smiling illustrated pirate character wearing a straw hat against a red background" />
           <div className="task-count"><strong>{openTasks.length}</strong><span>left today</span></div>
         </section>
 
@@ -388,13 +392,13 @@ export default function App() {
           </form>
 
           <div className="task-list">
-            {tasks.map((task, index) => <article className={`glass task-card ${task.completed?"is-complete":""}`} key={task.id}>
-              <div className="task-top"><button className="check-button" aria-label={task.completed?"Undo completion":"Complete task"} onClick={()=>task.completed?undoTask(task.id):completeTask(task.id)}>{task.completed?<Check size={17}/>:null}</button><span className="task-index">{String(index+1).padStart(2,"0")}</span><div className="task-main"><h3>{task.title}</h3><p><Sparkles size={13}/>{task.step}</p></div><button className="quiet-icon" aria-label="Delete task" onClick={async ()=>{setTasks(v=>v.filter(t=>t.id!==task.id));if(supabase&&session){const {error}=await supabase.from("tasks").delete().eq("id",task.id);if(error)setToast("Removed locally; cloud delete failed.");}setToast("Task removed.");}}><Trash2 size={15}/></button></div>
-              {!task.completed && <div className="task-actions"><button onClick={()=>newSmallerStep(task.id)}><CircleHelp size={14}/> Too hard</button><button onClick={()=>startFocus(task.id)}><Play size={14}/> Focus</button>{task.reminderAt && <span><AlarmClock size={13}/>{new Date(task.reminderAt).toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit"})}</span>}</div>}
-              {task.completed && <div className="task-actions"><span><CheckCircle2 size={14}/> Completed</span><button onClick={()=>undoTask(task.id)}><RotateCcw size={13}/> Undo</button></div>}
+            {openTasks.map((task, index) => <article className={`glass task-card ${slidingTaskId===task.id?"is-sliding-away":""}`} key={task.id}>
+              <div className="task-top"><button className="check-button" aria-label="Complete task" onClick={()=>completeTask(task.id)} disabled={slidingTaskId!==null}>{null}</button><span className="task-index">{String(index+1).padStart(2,"0")}</span><div className="task-main"><h3>{task.title}</h3><p><Sparkles size={13}/>{task.step}</p></div><button className="quiet-icon" aria-label="Delete task" onClick={async ()=>{setTasks(v=>v.filter(t=>t.id!==task.id));if(supabase&&session){const {error}=await supabase.from("tasks").delete().eq("id",task.id);if(error)setToast("Removed locally; cloud delete failed.");}setToast("Task removed.");}}><Trash2 size={15}/></button></div>
+              <div className="task-actions"><button onClick={()=>newSmallerStep(task.id)}><CircleHelp size={14}/> Too hard</button><button onClick={()=>startFocus(task.id)}><Play size={14}/> Focus</button>{task.reminderAt && <span><AlarmClock size={13}/>{new Date(task.reminderAt).toLocaleTimeString("en-IN",{hour:"numeric",minute:"2-digit"})}</span>}</div>
             </article>)}
-            {tasks.length===0 && <div className="empty-state glass"><Sparkles/><h3>Nothing waiting here.</h3><p>Add one small thing whenever it comes to mind.</p></div>}
+            {openTasks.length===0 && <div className="empty-state glass"><Sparkles/><h3>Nothing waiting here.</h3><p>Add one small thing whenever it comes to mind.</p></div>}
           </div>
+          {tasks.some(t=>t.completed) && <section className="completed-section"><p className="eyebrow">ALREADY DONE · {tasks.filter(t=>t.completed).length}</p><div className="completed-list">{tasks.filter(t=>t.completed).map(task=><div className="completed-task glass" key={task.id}><span><CheckCircle2 size={14}/>{task.title}</span><button className="quiet-icon" aria-label="Undo completion" onClick={()=>undoTask(task.id)}><RotateCcw size={14}/></button></div>)}</div></section>}
 
           {focusTask && <section className="glass focus-panel">
             <div className="focus-head"><div><p className="eyebrow">FOCUS SPACE</p><h2>{activeTask?.title ?? "A little focus time"}</h2></div><button className="quiet-icon" aria-label="Close focus" onClick={stopFocus}><X/></button></div>
