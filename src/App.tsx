@@ -180,27 +180,66 @@ export default function App() {
       } catch { setToast("Reminder saved in your task list."); }
     } else setToast("Reminder saved in your task list.");
   }
-  function addTask(e: FormEvent) {
+  async function askAssistant(task: string, mode: "NEW_TASK" | "TOO_HARD" | "NEXT_STEP" | "TIME_CHECK" = "NEW_TASK") {
+    if (!supabase || !session) return makeStep(task, mode === "TOO_HARD" ? "TOO_HARD" : "NEW_TASK");
+    try {
+      const { data, error } = await supabase.functions.invoke("stepwise-assistant", { body: { task, mode } });
+      if (!error && typeof data?.the_micro_step === "string" && data.the_micro_step.trim()) return data.the_micro_step.trim();
+    } catch { /* Keep task creation available with a local fallback. */ }
+    return makeStep(task, mode === "TOO_HARD" ? "TOO_HARD" : "NEW_TASK");
+  }
+
+  async function handleAuth(e: FormEvent) {
+    e.preventDefault();
+    if (!supabase) return;
+    setAuthBusy(true); setAuthMessage("");
+    try {
+      const result = authMode === "signup"
+        ? await supabase.auth.signUp({ email: authEmail.trim(), password: authPassword })
+        : await supabase.auth.signInWithPassword({ email: authEmail.trim(), password: authPassword });
+      if (result.error) setAuthMessage(result.error.message);
+      else if (authMode === "signup" && !result.data.session) setAuthMessage("Check your email for the confirmation link, then sign in here.");
+      else setAuthMessage("You're signed in. Your tasks are ready.");
+    } catch { setAuthMessage("Authentication is temporarily unavailable. Please try again."); }
+    finally { setAuthBusy(false); }
+  }
+
+  async function addTask(e: FormEvent) {
     e.preventDefault();
     const clean = title.trim();
     if (!clean) { setToast("Add a task name first."); return; }
-    const task: Task = { id: crypto.randomUUID(), title: clean, step: makeStep(clean), createdAt: new Date().toISOString(), completed: false, reminderAt: reminder, reminderFired: false, note: "", estimate: 15 };
+    const step = await askAssistant(clean, "NEW_TASK");
+    let task: Task = { id: crypto.randomUUID(), title: clean, step, createdAt: new Date().toISOString(), completed: false, reminderAt: reminder, reminderFired: false, note: "", estimate: 15 };
+    if (supabase && session) {
+      const { data, error } = await supabase.from("tasks").insert({
+        user_id: session.user.id, title: clean, mode: "NEW_TASK", micro_step: step,
+        reminder_at: reminder ? new Date(reminder).toISOString() : null, estimate_minutes: 15
+      }).select().single();
+      if (error) setToast("Cloud save failed. Your task is kept locally for now.");
+      else if (data) task = { ...task, id: String(data.id), createdAt: String(data.created_at) };
+    }
     setTasks(v => [task, ...v]); setTitle(""); setReminder(""); setToast("Your task is here. Start whenever you’re ready.");
     void scheduleReminder(task);
   }
-  function completeTask(id: string) {
+  async function completeTask(id: string) {
     const task = tasks.find(t => t.id === id); if (!task || task.completed) return;
     setTasks(v => v.map(t => t.id === id ? { ...t, completed: true } : t)); setPoints(v => v + 10); setActivityDays(v => [...new Set([...v, dayKey(new Date())])]);
+    if (supabase && session) { const { error } = await supabase.from("tasks").update({ completed: true }).eq("id", id); if (error) setToast("Saved on this device. Cloud update will retry next time."); }
     setToast("A small win. +10 points");
   }
-  function undoTask(id: string) {
+  async function undoTask(id: string) {
     const task = tasks.find(t => t.id === id); if (!task || !task.completed) return;
-    setTasks(v => v.map(t => t.id === id ? { ...t, completed: false } : t)); setPoints(v => Math.max(0, v - 10)); setToast("Task moved back to today.");
+    setTasks(v => v.map(t => t.id === id ? { ...t, completed: false } : t)); setPoints(v => Math.max(0, v - 10));
+    if (supabase && session) { const { error } = await supabase.from("tasks").update({ completed: false }).eq("id", id); if (error) setToast("Cloud update failed. The local change is kept."); }
+    setToast("Task moved back to today.");
   }
   function startFocus(id: string) { setFocusTask(id); setRemaining(focusMinutes * 60); setRunning(true); setFocusNote(""); }
   function stopFocus() { setRunning(false); setFocusTask(null); setRemaining(0); setToast("Your place is saved."); }
-  function newSmallerStep(id: string) {
-    setTasks(v => v.map(t => t.id === id ? { ...t, step: makeStep(t.title, "TOO_HARD") } : t));
+  async function newSmallerStep(id: string) {
+    const task = tasks.find(t => t.id === id); if (!task) return;
+    const step = await askAssistant(task.title, "TOO_HARD");
+    setTasks(v => v.map(t => t.id === id ? { ...t, step } : t));
+    if (supabase && session) { const { error } = await supabase.from("tasks").update({ mode: "TOO_HARD", micro_step: step }).eq("id", id); if (error) setToast("The smaller step is available locally; cloud sync failed."); }
     setToast("Made the next step smaller.");
   }
   function createPlan(e: FormEvent) {
