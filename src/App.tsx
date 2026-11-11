@@ -77,6 +77,7 @@ export default function App() {
   const [planText, setPlanText] = useState("");
   const [planMinutes, setPlanMinutes] = useState(45);
   const [planSteps, setPlanSteps] = useState<PlanStep[]>([]);
+  const [planLoading, setPlanLoading] = useState(false);
   const [planRunning, setPlanRunning] = useState(false);
   const [planRemaining, setPlanRemaining] = useState(0);
   const [buddyName, setBuddyName] = useState("");
@@ -251,9 +252,23 @@ export default function App() {
     if (supabase && session) { const { error } = await supabase.from("tasks").update({ mode: "TOO_HARD", micro_step: step }).eq("id", id); if (error) setToast("The smaller step is available locally; cloud sync failed."); }
     setToast("Made the next step smaller.");
   }
-  function createPlan(e: FormEvent) {
+  async function createPlan(e: FormEvent) {
     e.preventDefault(); if (!planText.trim()) { setToast("Add what you’d like to work on."); return; }
-    setPlanSteps(buildPlan(planText, planMinutes)); setPlanRunning(false); setPlanRemaining(0); setToast("Plan created. Adjust any step before you begin.");
+    setPlanLoading(true);
+    let nextSteps = buildPlan(planText, planMinutes);
+    if (supabase && session) {
+      try {
+        const { data, error } = await supabase.functions.invoke("timed-plan-assistant", { body: { task: planText.trim(), minutes: planMinutes } });
+        if (!error && Array.isArray(data?.plan_steps) && data.plan_steps.length) {
+          nextSteps = data.plan_steps.map((step: any) => ({
+            id: crypto.randomUUID(), title: String(step.title), minutes: Number(step.minutes),
+            kind: (["setup","focus","reset","wrap"].includes(step.kind) ? step.kind : "focus") as PlanStep["kind"], done: false
+          }));
+          setToast(data.source === "ai" ? "Your AI plan is ready. Adjust anything you need." : "Your plan is ready with a gentle fallback.");
+        } else setToast("Your plan is ready. You can adjust each step.");
+      } catch { setToast("Your plan is ready with a local fallback."); }
+    }
+    setPlanSteps(nextSteps); setPlanRunning(false); setPlanRemaining(0); setPlanLoading(false);
   }
   const planTotal = planSteps.reduce((sum, s) => sum + s.minutes, 0);
   const currentStep = planSteps.find(s => !s.done);
@@ -345,7 +360,7 @@ export default function App() {
             <label htmlFor="plan-task">What would you like to work on?</label><textarea id="plan-task" value={planText} onChange={e=>setPlanText(e.target.value)} placeholder="The task taking up space in your head…"/>
             <div className="range-heading"><label htmlFor="plan-time">Total time</label><strong>{planMinutes<60?`${planMinutes} min`:`${Math.floor(planMinutes/60)}h ${planMinutes%60?planMinutes%60+"m":""}`}</strong></div>
             <input id="plan-time" className="silver-range" type="range" min="15" max="240" step="5" value={planMinutes} onChange={e=>setPlanMinutes(Number(e.target.value))}/><div className="range-labels"><span>15 min</span><span>4 hours</span></div>
-            <button className="primary-button full-button" type="submit">Create my plan <ArrowRight size={16}/></button>
+            <button className="primary-button full-button" type="submit" disabled={planLoading}>{planLoading ? "Building your plan…" : "Create my plan"} <ArrowRight size={16}/></button>
           </form>
           {planSteps.length>0 && <section className="glass generated-plan"><div className="section-title"><div><p className="eyebrow">YOUR PLAN</p><h3>{planText}</h3></div><span className="task-progress">{planSteps.filter(s=>s.done).length}/{planSteps.length}</span></div>
             <p className="muted-copy">Planned total: {planTotal} minutes {planTotal!==planMinutes && "· Adjusted durations"}</p>
