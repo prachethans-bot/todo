@@ -47,6 +47,8 @@ GitHub Actions runs a TypeScript/Vite production build on the fresh branch and u
 
 ## Android
 
+The Today hero uses the character artwork cropped from the latest generated Vinai concept image in the ChatGPT Library.
+
 The Capacitor application ID is `com.vinai.focus`.
 
 ```bash
