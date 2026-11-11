@@ -74,6 +74,10 @@ try {
   await page.getByText("Your accountability buddy").waitFor({ state: "visible" });
 
   // Task and progress note survive a refresh in local mode
+  await page.waitForFunction(() => {
+    const saved = JSON.parse(localStorage.getItem("vinai.fresh.v1") || "{}");
+    return saved.tasks?.some(item => item.title === "Study the biology chapter" && item.note === "Opened the book and found the chapter.");
+  }, null, { timeout: 5000 });
   await page.reload({ waitUntil: "networkidle" });
   const stored = await page.evaluate(() => JSON.parse(localStorage.getItem("vinai.fresh.v1") || "{}"));
   const saved = stored.tasks?.find(item => item.title === "Study the biology chapter");
