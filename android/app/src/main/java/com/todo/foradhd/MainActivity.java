@@ -1,4 +1,4 @@
-package com.todo.foradhd;
+package com.vinai.focus;
 
 import com.getcapacitor.BridgeActivity;
 
