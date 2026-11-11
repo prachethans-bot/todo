@@ -1,9 +1,10 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "com.todo.foradhd",
+  appId: "com.vinai.focus",
   appName: "வினை",
-  webDir: "dist"
+  webDir: "dist",
+  bundledWebRuntime: false
 };
 
 export default config;
