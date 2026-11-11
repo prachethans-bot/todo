@@ -9,6 +9,7 @@ import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { supabase, hasSupabaseConfig } from "./lib/supabase";
 import type { Session } from "@supabase/supabase-js";
+import { buildInviteLink, createInvite, loadLocalBuddy, pushBuddyStatus, saveLocalBuddy, setBuddyState, type LocalBuddy } from "./lib/buddy";
 
 type Task = {
   id: string; title: string; step: string; createdAt: string; completed: boolean;
@@ -82,6 +83,9 @@ export default function App() {
   const [planRemaining, setPlanRemaining] = useState(0);
   const [buddyName, setBuddyName] = useState("");
   const [buddyCode, setBuddyCode] = useState("");
+  const [localBuddy, setLocalBuddy] = useState<LocalBuddy | null>(() => loadLocalBuddy());
+  const [buddyLink, setBuddyLink] = useState("");
+  const [buddySessionId, setBuddySessionId] = useState("");
   const [toast, setToast] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
@@ -235,7 +239,11 @@ export default function App() {
     if (supabase && session) { const { error } = await supabase.from("tasks").update({ completed: false }).eq("id", id); if (error) setToast("Cloud update failed. The local change is kept."); }
     setToast("Task moved back to today.");
   }
-  function startFocus(id: string) { const task = tasks.find(t => t.id === id); setFocusTask(id); setRemaining(focusMinutes * 60); setRunning(true); setFocusNote(task?.note ?? ""); }
+  function startFocus(id: string) {
+    const task = tasks.find(t => t.id === id); const sessionId = crypto.randomUUID();
+    setFocusTask(id); setRemaining(focusMinutes * 60); setRunning(true); setFocusNote(task?.note ?? ""); setBuddySessionId(sessionId);
+    if (localBuddy && task) void pushBuddyStatus(localBuddy, task.title, "focusing", sessionId);
+  }
   async function stopFocus() {
     setRunning(false);
     if (supabase && session && focusTask && focusNote.trim()) {
@@ -243,7 +251,8 @@ export default function App() {
       setTasks(v => v.map(t => t.id === focusTask ? { ...t, note: focusNote.trim() } : t));
       if (error) setToast("Your note is saved locally, but cloud sync failed.");
     }
-    setFocusTask(null); setRemaining(0); setToast("Your place is saved.");
+    if (localBuddy && buddySessionId) void pushBuddyStatus(localBuddy, "", "idle", buddySessionId);
+    setFocusTask(null); setRemaining(0); setBuddySessionId(""); setToast("Your place is saved.");
   }
   async function newSmallerStep(id: string) {
     const task = tasks.find(t => t.id === id); if (!task) return;
@@ -283,7 +292,28 @@ export default function App() {
     try { if (navigator.share) await navigator.share({ text: message }); else { await navigator.clipboard.writeText(message); setToast("Progress copied to clipboard."); } }
     catch { setToast("Sharing was cancelled."); }
   }
-  function saveBuddy(e: FormEvent) { e.preventDefault(); if (!buddyName.trim() || !buddyCode.trim()) { setToast("Add a name and invite code."); return; } localStorage.setItem("vinai.buddy.local", JSON.stringify({ name: buddyName.trim(), code: buddyCode.trim() })); setToast("Buddy details saved on this device."); }
+  async function createBuddyInvite(e: FormEvent) {
+    e.preventDefault();
+    if (!session) { setToast("Sign in to create a buddy invitation."); return; }
+    if (!buddyName.trim()) { setToast("Add your buddy's name first."); return; }
+    const invite = await createInvite(buddyName.trim());
+    if (!invite) { setToast("Could not create the invitation. Please try again."); return; }
+    setLocalBuddy(invite); saveLocalBuddy(invite); setBuddyLink(buildInviteLink(invite.token));
+    setToast("Your private buddy invite is ready.");
+  }
+  async function copyBuddyInvite() {
+    if (!buddyLink) return;
+    try { await navigator.clipboard.writeText(buddyLink); setToast("Invite link copied."); }
+    catch { setToast("Copy is unavailable in this browser. You can select the link."); }
+  }
+  async function changeBuddyState(state: "active" | "paused" | "removed") {
+    if (!localBuddy) return;
+    const ok = await setBuddyState(localBuddy, state);
+    if (!ok) { setToast("Could not update buddy sharing."); return; }
+    if (state === "removed") { saveLocalBuddy(null); setLocalBuddy(null); setBuddyLink(""); }
+    else { const next = { ...localBuddy, state }; saveLocalBuddy(next); setLocalBuddy(next); }
+    setToast(state === "paused" ? "Buddy sharing paused." : state === "removed" ? "Buddy connection removed." : "Buddy sharing is active.");
+  }
 
   if (!authReady) return <main className="app-bg"><section className="auth-card glass"><div className="brand-word" lang="ta">வினை</div><p>Getting your space ready…</p></section></main>;
   if (hasSupabaseConfig && !session) return <main className="app-bg"><div className="desktop-glow"/><section className="auth-card glass">
@@ -373,7 +403,8 @@ export default function App() {
 
         {tab === "buddy" && <section className="content-section">
           <p className="eyebrow">BETTER, TOGETHER</p><h2>Your accountability buddy</h2><p className="muted-copy">Not a report card. A friend in your corner. Share a small win, or ask for a little company.</p>
-          <div className="glass buddy-card"><div className="buddy-symbol"><UserRound size={24}/></div><h3>A little company can help.</h3><p>Buddy invites and live updates will connect once your Supabase project is configured. You can save a local buddy note in the meantime.</p><form onSubmit={saveBuddy}><label htmlFor="buddy-name">Buddy name</label><input id="buddy-name" value={buddyName} onChange={e=>setBuddyName(e.target.value)} placeholder="A name you know"/><label htmlFor="buddy-code">Invite code</label><input id="buddy-code" value={buddyCode} onChange={e=>setBuddyCode(e.target.value)} placeholder="Paste an invite code"/><button className="primary-button full-button">Save on this device <Check size={16}/></button></form></div>
+          <div className="glass buddy-card"><div className="buddy-symbol"><UserRound size={24}/></div><h3>A little company can help.</h3><p>Invite someone you trust. They can see only the focus status and task label you choose to share, not your task list or notes.</p>
+            {!localBuddy ? <form onSubmit={createBuddyInvite}><label htmlFor="buddy-name">Buddy name</label><input id="buddy-name" value={buddyName} onChange={e=>setBuddyName(e.target.value)} placeholder="A name you know"/><button className="primary-button full-button" disabled={!session}>Create private invite <ArrowRight size={16}/></button>{!session && <p className="buddy-hint">Sign in to create an invite.</p>}</form> : <div className="buddy-invite"><p className="buddy-hint">Invite for {localBuddy.ownerName}</p><input aria-label="Buddy invitation link" readOnly value={buddyLink || buildInviteLink(localBuddy.token)}/><button className="primary-button full-button" onClick={()=>void copyBuddyInvite()}>Copy invite link <Share2 size={15}/></button><div className="buddy-manage"><button className="secondary-button" onClick={()=>void changeBuddyState(localBuddy.state==="paused"?"active":"paused")}>{localBuddy.state==="paused"?"Resume sharing":"Pause sharing"}</button><button className="secondary-button" onClick={()=>void changeBuddyState("removed")}>Remove buddy</button></div></div>}</div>
           <button className="secondary-button full-button share-button" onClick={shareProgress}><Share2 size={16}/> Share a small progress check-in</button>
           <div className="glass encouragement"><Sparkles/><p>“Proud of the start. One step at a time.”</p></div>
         </section>}
