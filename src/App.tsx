@@ -328,7 +328,7 @@ export default function App() {
       <div className="screen">
         <header className="topbar">
           <div className="brand-lockup">
-            <div className="brand-mark"><img src="/app-logo.jpg" alt="" onError={e => { (e.currentTarget as HTMLImageElement).style.display="none"; }} /><span lang="ta">வினை</span></div>
+            <div className="brand-mark"><img src="/vinai-icon.svg" alt="" onError={e => { (e.currentTarget as HTMLImageElement).style.display="none"; }} /><span lang="ta">வினை</span></div>
             <div><div className="brand-word" lang="ta">வினை</div><div className="date-label">{today}</div></div>
           </div>
           <button className="icon-button" aria-label="Settings" onClick={() => setShowSettings(v => !v)}><UserRound size={18}/></button>
