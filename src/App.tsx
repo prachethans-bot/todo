@@ -110,6 +110,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (hasSupabaseConfig && !session) { setTasks([]); return; }
     if (!supabase || !session?.user.id) return;
     let alive = true;
     void (async () => {
@@ -119,7 +120,7 @@ export default function App() {
       setTasks((data ?? []).map((row: any) => ({
         id: String(row.id), title: String(row.title), step: String(row.micro_step),
         createdAt: String(row.created_at), completed: Boolean(row.completed),
-        reminderAt: row.reminder_at ? new Date(row.reminder_at).toISOString().slice(0,16) : "",
+        reminderAt: row.reminder_at ? localInputDate(new Date(row.reminder_at)) : "",
         note: String(row.progress_note ?? ""), estimate: Number(row.estimate_minutes ?? 15)
       })));
     })();
@@ -127,7 +128,7 @@ export default function App() {
   }, [session?.user.id]);
 
   useEffect(() => {
-    if (!session) localStorage.setItem(STORE, JSON.stringify({ tasks, points, activityDays }));
+    localStorage.setItem(STORE, JSON.stringify({ ...(session ? {} : { tasks }), points, activityDays }));
   }, [tasks, points, activityDays, session]);
   useEffect(() => {
     if (!running && !planRunning) return;
@@ -233,7 +234,7 @@ export default function App() {
     if (supabase && session) { const { error } = await supabase.from("tasks").update({ completed: false }).eq("id", id); if (error) setToast("Cloud update failed. The local change is kept."); }
     setToast("Task moved back to today.");
   }
-  function startFocus(id: string) { setFocusTask(id); setRemaining(focusMinutes * 60); setRunning(true); setFocusNote(""); }
+  function startFocus(id: string) { const task = tasks.find(t => t.id === id); setFocusTask(id); setRemaining(focusMinutes * 60); setRunning(true); setFocusNote(task?.note ?? ""); }
   async function stopFocus() {
     setRunning(false);
     if (supabase && session && focusTask && focusNote.trim()) {
