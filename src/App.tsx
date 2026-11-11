@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
+import { supabase, hasSupabaseConfig } from "./lib/supabase";
+import type { Session } from "@supabase/supabase-js";
 
 type Task = {
   id: string; title: string; step: string; createdAt: string; completed: boolean;
@@ -81,13 +83,52 @@ export default function App() {
   const [buddyCode, setBuddyCode] = useState("");
   const [toast, setToast] = useState("");
   const [showSettings, setShowSettings] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
+  const [authReady, setAuthReady] = useState(!hasSupabaseConfig);
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authMessage, setAuthMessage] = useState("");
   const completed = tasks.filter(t => t.completed).length;
   const streak = streakFromDays(activityDays);
   const openTasks = tasks.filter(t => !t.completed);
   const today = new Date().toLocaleDateString("en-IN", { weekday: "long", month: "long", day: "numeric" });
   const activeTask = tasks.find(t => t.id === focusTask);
 
-  useEffect(() => { localStorage.setItem(STORE, JSON.stringify({ tasks, points, activityDays })); }, [tasks, points, activityDays]);
+  useEffect(() => {
+    if (!supabase) { setAuthReady(true); return; }
+    let alive = true;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (alive) { setSession(data.session); setAuthReady(true); }
+    }).catch(() => { if (alive) setAuthReady(true); });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => {
+      setSession(next);
+      setAuthReady(true);
+    });
+    return () => { alive = false; listener.subscription.unsubscribe(); };
+  }, []);
+
+  useEffect(() => {
+    if (!supabase || !session?.user.id) return;
+    let alive = true;
+    void (async () => {
+      const { data, error } = await supabase.from("tasks").select("*").order("created_at", { ascending: false });
+      if (!alive) return;
+      if (error) { setToast("Could not load your cloud tasks. Your saved data is still on this device."); return; }
+      setTasks((data ?? []).map((row: any) => ({
+        id: String(row.id), title: String(row.title), step: String(row.micro_step),
+        createdAt: String(row.created_at), completed: Boolean(row.completed),
+        reminderAt: row.reminder_at ? new Date(row.reminder_at).toISOString().slice(0,16) : "",
+        note: String(row.progress_note ?? ""), estimate: Number(row.estimate_minutes ?? 15)
+      })));
+    })();
+    return () => { alive = false; };
+  }, [session?.user.id]);
+
+  useEffect(() => {
+    if (!session) localStorage.setItem(STORE, JSON.stringify({ tasks, points, activityDays }));
+  }, [tasks, points, activityDays, session]);
   useEffect(() => {
     if (!running && !planRunning) return;
     const id = window.setInterval(() => {
