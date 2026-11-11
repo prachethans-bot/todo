@@ -267,10 +267,12 @@ export default function App() {
   }
   async function stopFocus() {
     setRunning(false);
-    if (supabase && session && focusTask && focusNote.trim()) {
-      const { error } = await supabase.from("tasks").update({ progress_note: focusNote.trim() }).eq("id", focusTask);
+    if (focusTask && focusNote.trim()) {
       setTasks(v => v.map(t => t.id === focusTask ? { ...t, note: focusNote.trim() } : t));
-      if (error) setToast("Your note is saved locally, but cloud sync failed.");
+      if (supabase && session) {
+        const { error } = await supabase.from("tasks").update({ progress_note: focusNote.trim() }).eq("id", focusTask);
+        if (error) setToast("Your note is saved locally, but cloud sync failed.");
+      }
     }
     if (localBuddy && buddySessionId) void pushBuddyStatus(localBuddy, "", "idle", buddySessionId);
     setFocusTask(null); setRemaining(0); setBuddySessionId(""); setToast("Your place is saved.");
