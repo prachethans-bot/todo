@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import {
   AlarmClock, ArrowRight, Bell, Check, CheckCircle2, ChevronRight, CircleHelp,
-  Clock3, Flame, Pause, Play, Plus, RotateCcw, Share2, Sparkles, Square,
-  Timer, Trash2, Trophy, UserRound, X
+  Flame, Pause, Play, Plus, RotateCcw, Share2, Sparkles, Square,
+  Trash2, UserRound, X
 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
@@ -78,7 +78,6 @@ export default function App() {
   const [planRunning, setPlanRunning] = useState(false);
   const [planRemaining, setPlanRemaining] = useState(0);
   const [buddyName, setBuddyName] = useState("");
-  const [buddyCode, setBuddyCode] = useState("");
   const [localBuddy, setLocalBuddy] = useState<LocalBuddy | null>(() => loadLocalBuddy());
   const [buddyLink, setBuddyLink] = useState("");
   const [buddySessionId, setBuddySessionId] = useState("");
@@ -224,12 +223,29 @@ export default function App() {
     setTasks(v => [task, ...v]); setTitle(""); setReminder(""); setToast("Your task is here. Start whenever you’re ready.");
     void scheduleReminder(task);
   }
+  function playRewardSound() {
+    try {
+      const audio = new AudioContext();
+      const oscillator = audio.createOscillator();
+      const gain = audio.createGain();
+      oscillator.type = "sine"; oscillator.frequency.setValueAtTime(660, audio.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(880, audio.currentTime + 0.12);
+      gain.gain.setValueAtTime(0.0001, audio.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.035, audio.currentTime + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + 0.22);
+      oscillator.connect(gain); gain.connect(audio.destination);
+      oscillator.start(); oscillator.stop(audio.currentTime + 0.23);
+      oscillator.onended = () => void audio.close();
+    } catch { /* Sound is optional when audio is unavailable. */ }
+  }
+
   async function completeTask(id: string) {
     const task = tasks.find(t => t.id === id); if (!task || task.completed) return;
     const reward = Math.random() < 0.2 ? 35 : 10;
     setTasks(v => v.map(t => t.id === id ? { ...t, completed: true, pointsAwarded: reward } : t));
     setPoints(v => v + reward); setActivityDays(v => [...new Set([...v, dayKey(new Date())])]);
     setRewardBurst(true); window.setTimeout(() => setRewardBurst(false), 650);
+    playRewardSound();
     try { navigator.vibrate?.(12); } catch { /* Haptics are optional. */ }
     if (supabase && session) {
       const { error } = await supabase.from("tasks").update({ completed: true, points_awarded: reward }).eq("id", id);
