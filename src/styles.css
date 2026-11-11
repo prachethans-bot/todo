@@ -143,3 +143,19 @@ input::placeholder,textarea::placeholder{color:#777}
 .auth-message{font-size:11px;line-height:1.5;color:#d5d5d5;margin:13px 0 0}
 .auth-card .text-button{display:block;margin:18px auto 0}
 button:disabled{opacity:.55;cursor:wait}
+
+
+.buddy-hint{font-size:10px!important;line-height:1.5;color:#999!important;margin:8px 0 0!important;text-align:left}
+.buddy-invite>input{width:100%;height:38px;border:1px solid #ffffff24;border-radius:9px;background:#0005;color:#ddd;padding:0 9px;font-size:10px}
+.buddy-manage{display:flex;gap:8px}
+.buddy-manage>*{flex:1;font-size:10px;padding:0 7px}
+.buddy-screen{min-height:100dvh;display:grid;place-items:center;padding:24px;background:radial-gradient(ellipse at 50% 10%,#ffffff16,transparent 45%),#090909;color:#eee}
+.buddy-screen .buddy-card{width:min(430px,100%);padding:25px;border-radius:22px;text-align:center}
+.buddy-brand{display:block;font:700 12px 'Space Grotesk',sans-serif;letter-spacing:.12em;color:#aaa;margin-bottom:20px}
+.buddy-screen h1{font:600 22px/1.25 'Space Grotesk',sans-serif;margin:10px 0 18px}
+.buddy-line{font-size:13px;line-height:1.6;color:#c8c8c8}
+.buddy-actions,.buddy-cheers{display:flex;justify-content:center;gap:9px;margin-top:18px}
+.buddy-actions button,.buddy-cheers button{min-height:40px;padding:0 18px;border-radius:10px;border:1px solid #ffffff25;background:#ffffff0c;color:#eee}
+.buddy-actions .primary{background:linear-gradient(180deg,#f4f4f4,#bcbcbc);color:#111;border-color:#eee}
+.buddy-status{display:inline-flex;padding:6px 11px;border:1px solid #ffffff28;border-radius:30px;color:#ddd;font-size:11px}
+.buddy-cheers button{font-size:22px;width:48px;padding:0}
