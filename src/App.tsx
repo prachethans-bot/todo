@@ -346,7 +346,7 @@ export default function App() {
   return <main className="app-bg">
     <div className="desktop-glow" />
     <section className="phone-frame" aria-label="வினை application">
-      <div className="screen">
+      <div className="screen" id="main-content">
         <header className="topbar">
           <div className="brand-lockup">
             <div className="brand-mark"><img src="/vinai-icon.svg" alt="" onError={e => { (e.currentTarget as HTMLImageElement).style.display="none"; }} /><span lang="ta">வினை</span></div>
