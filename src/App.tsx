@@ -267,7 +267,7 @@ export default function App() {
       if (error) setToast("Saved on this device. Cloud update will retry next time.");
     }
     setToast(reward === 35 ? "Bonus win! +10 points and a +25 bonus." : "A small win. +10 points");
-    }, 300);
+    }, 360);
   }
   async function undoTask(id: string) {
     const task = tasks.find(t => t.id === id); if (!task || !task.completed) return;
