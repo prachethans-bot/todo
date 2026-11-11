@@ -340,7 +340,7 @@ export default function App() {
         </section>
 
         <section className="hero-poster" aria-label="Motivational poster">
-          <img src="/stay-hard-hero.jpg" alt="Stay Hard monochrome motivational poster" onError={e => { (e.currentTarget as HTMLImageElement).style.opacity="0"; }} />
+          
           <div className="poster-fallback"><span>STAY<br/>HARD</span><small>START WHERE YOU ARE</small></div>
           <div className="task-count"><strong>{openTasks.length}</strong><span>left today</span></div>
         </section>
