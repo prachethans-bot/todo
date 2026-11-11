@@ -217,8 +217,8 @@ export default function App() {
         user_id: session.user.id, title: clean, mode: "NEW_TASK", micro_step: step,
         reminder_at: reminder ? new Date(reminder).toISOString() : null, estimate_minutes: 15
       }).select().single();
-      if (error) setToast("Cloud save failed. Your task is kept locally for now.");
-      else if (data) task = { ...task, id: String(data.id), createdAt: String(data.created_at) };
+      if (error) { setToast("Could not save this task to your account. Please try again."); return; }
+      if (data) task = { ...task, id: String(data.id), createdAt: String(data.created_at) };
     }
     setTasks(v => [task, ...v]); setTitle(""); setReminder(""); setToast("Your task is here. Start whenever you’re ready.");
     void scheduleReminder(task);
@@ -255,7 +255,7 @@ export default function App() {
   }
   async function undoTask(id: string) {
     const task = tasks.find(t => t.id === id); if (!task || !task.completed) return;
-    const reward = task.pointsAwarded ?? 10;
+    const reward = task.pointsAwarded && task.pointsAwarded > 0 ? task.pointsAwarded : 10;
     setTasks(v => v.map(t => t.id === id ? { ...t, completed: false, pointsAwarded: 0 } : t)); setPoints(v => Math.max(0, v - reward));
     if (supabase && session) { const { error } = await supabase.from("tasks").update({ completed: false, points_awarded: 0 }).eq("id", id); if (error) setToast("Cloud update failed. The local change is kept."); }
     setToast("Task moved back to today.");
