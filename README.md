@@ -54,7 +54,7 @@ npm run cap:sync
 npm run cap:android
 ```
 
-Build a debug or signed release APK from Android Studio. Android local notifications are scheduled with the OS and can fire while the app is closed, subject to notification permission, exact-alarm policy, battery restrictions, and device-vendor behavior.
+Build a debug or signed release APK from Android Studio. The `Fresh Vinai Android APK` GitHub Actions workflow also builds a debug APK on pushes and pull requests to this branch and uploads it as the `vinai-debug-apk` artifact. Android local notifications are scheduled with the OS and can fire while the app is closed, subject to notification permission, exact-alarm policy, battery restrictions, and device-vendor behavior.
 
 ## Not yet verified / remaining work
 
