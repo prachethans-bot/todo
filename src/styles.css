@@ -173,3 +173,10 @@ button:disabled{opacity:.55;cursor:wait}
 .reward-burst span:nth-child(5){--dx:0px;--dy:-100px;animation-delay:.04s}
 @keyframes reward-spark{0%{opacity:0;transform:translate(-50%,-50%) scale(.25)}18%{opacity:1}100%{opacity:0;transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(1.3)}}
 @media(prefers-reduced-motion:reduce){.reward-burst span{animation:none;opacity:0}.task-card.is-complete{animation:none}}
+
+.hero-poster>img{object-fit:cover;object-position:center 43%;background:#a91420}
+.task-card{will-change:transform,opacity}
+.task-card.is-sliding-away{pointer-events:none;animation:task-slide-away .3s cubic-bezier(.22,.72,.2,1) forwards}
+@keyframes task-slide-away{0%{opacity:1;transform:translateX(0) scale(1);max-height:180px}65%{opacity:.25;transform:translateX(105%) scale(.94)}100%{opacity:0;transform:translateX(115%) scale(.9);max-height:0;padding-top:0;padding-bottom:0;margin:0;border-width:0}}
+.completed-section{margin-top:18px}.completed-list{display:grid;gap:7px}.completed-task{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border-radius:12px}.completed-task>span{display:flex;align-items:center;gap:8px;min-width:0;color:#999;font-size:11px}.completed-task>span svg{flex:none;color:#cfcfcf}
+@media(prefers-reduced-motion:reduce){.task-card.is-sliding-away{animation:none;opacity:0}}
