@@ -23,8 +23,8 @@ button,input,textarea,select{font:inherit}button{cursor:pointer;color:inherit}bu
 .brand-lockup{display:flex;align-items:center;gap:calc(34 * var(--u))}
 .brand-mark{width:calc(120 * var(--u));height:calc(120 * var(--u));border-radius:50%;padding:calc(4 * var(--u));background:var(--metal-ring);box-shadow:0 0 calc(14 * var(--u)) rgba(255,255,255,.08);display:grid;place-items:center;position:relative}
 .brand-mark:before{content:"";position:absolute;inset:calc(6 * var(--u));border-radius:50%;background:radial-gradient(circle,#0f0f0f,#000 76%)}
-.brand-mark span{position:relative;font-family:"Noto Sans Tamil","Latha",sans-serif;font-size:calc(33 * var(--u));font-weight:900;line-height:1;background:var(--metal-text);background-clip:text;-webkit-background-clip:text;color:transparent;text-shadow:0 1px rgba(0,0,0,.6)}
-.brand-word{font-family:"Noto Sans Tamil","Latha",sans-serif;font-size:calc(61 * var(--u));font-weight:900;line-height:1;background:var(--metal-text);background-clip:text;-webkit-background-clip:text;color:transparent;-webkit-text-stroke:1px rgba(0,0,0,.6);filter:drop-shadow(0 2px 4px rgba(0,0,0,.8))}
+.brand-mark span{position:relative;font-family:"Noto Sans Tamil","Nirmala UI","Latha",sans-serif;font-size:calc(33 * var(--u));font-weight:900;line-height:1;background:var(--metal-text);background-clip:text;-webkit-background-clip:text;color:transparent;text-shadow:0 1px rgba(0,0,0,.6)}
+.brand-word{font-family:"Noto Sans Tamil","Nirmala UI","Latha",sans-serif;font-size:calc(61 * var(--u));font-weight:900;line-height:1;background:var(--metal-text);background-clip:text;-webkit-background-clip:text;color:transparent;-webkit-text-stroke:1px rgba(0,0,0,.6);filter:drop-shadow(0 2px 4px rgba(0,0,0,.8))}
 .header-actions{display:flex;align-items:center;gap:calc(29 * var(--u))}
 .icon-button{width:calc(76 * var(--u));height:calc(76 * var(--u));min-width:calc(76 * var(--u));border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--line-strong);background:radial-gradient(circle at 40% 30%,#141414,#080808);color:#fff;position:relative}
 .icon-button svg{width:calc(34 * var(--u));height:calc(34 * var(--u));stroke-width:2.2}
@@ -109,3 +109,5 @@ button,input,textarea,select{font:inherit}button{cursor:pointer;color:inherit}bu
 @media(min-width:521px){.phone-frame{box-shadow:0 0 0 1px #111}.toast{bottom:24px}}
 @media(max-height:700px){.scroll-column{padding-bottom:calc(300 * var(--u))}.hero-section{height:calc(620 * var(--u));min-height:calc(620 * var(--u))}.hero-copy{top:calc(100 * var(--u))}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+
+.skip-link{position:absolute;left:-9999px;top:8px;z-index:50;background:#eee;color:#111;padding:10px 14px;border-radius:8px}.skip-link:focus{left:12px}
