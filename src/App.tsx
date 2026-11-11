@@ -13,7 +13,7 @@ import { buildInviteLink, createInvite, loadLocalBuddy, pushBuddyStatus, saveLoc
 
 type Task = {
   id: string; title: string; step: string; createdAt: string; completed: boolean;
-  reminderAt: string; reminderFired?: boolean; note: string; estimate: number;
+  reminderAt: string; reminderFired?: boolean; note: string; estimate: number; pointsAwarded?: number;
 };
 type PlanStep = { id: string; title: string; minutes: number; kind: "setup" | "focus" | "reset" | "wrap"; done: boolean };
 type Tab = "today" | "plan" | "buddy";
@@ -23,10 +23,6 @@ const localInputDate = (date: Date) => `${date.getFullYear()}-${pad(date.getMont
 const fmt = (seconds: number) => `${pad(Math.floor(Math.max(0,seconds)/60))}:${pad(Math.max(0,seconds)%60)}`;
 function dayKey(date: Date) { return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`; }
 function streakFromDays(days: string[]) { const set = new Set(days); const today = new Date(); let cursor = new Date(today); if (!set.has(dayKey(cursor))) cursor.setDate(cursor.getDate()-1); let count = 0; while (set.has(dayKey(cursor))) { count++; cursor.setDate(cursor.getDate()-1); } return count; }
-const seedTasks: Task[] = [
-  { id: "seed-1", title: "Open the maths chapter", step: "Put the textbook on your desk.", createdAt: new Date().toISOString(), completed: false, reminderAt: "", note: "", estimate: 20 },
-  { id: "seed-2", title: "Reply to one important message", step: "Open your messages and find the conversation.", createdAt: new Date().toISOString(), completed: false, reminderAt: "", note: "", estimate: 10 }
-];
 function makeStep(title: string, mode: "NEW_TASK" | "TOO_HARD" = "NEW_TASK") {
   const clean = title.trim();
   if (mode === "TOO_HARD") return clean.length > 18 ? "Look at the first thing you need." : "Move closer to where you’ll begin.";
@@ -62,10 +58,10 @@ function buildPlan(task: string, total: number): PlanStep[] {
 }
 export default function App() {
   const [tasks, setTasks] = useState<Task[]>(() => {
-    try { const saved = localStorage.getItem(STORE); return saved ? JSON.parse(saved).tasks ?? seedTasks : seedTasks; }
-    catch { return seedTasks; }
+    try { const saved = localStorage.getItem(STORE); return saved ? JSON.parse(saved).tasks ?? [] : []; }
+    catch { return []; }
   });
-  const [points, setPoints] = useState(() => { try { return Number(JSON.parse(localStorage.getItem(STORE) || "{}").points ?? 120); } catch { return 120; } });
+  const [points, setPoints] = useState(() => { try { return Number(JSON.parse(localStorage.getItem(STORE) || "{}").points ?? 0); } catch { return 120; } });
   const [activityDays, setActivityDays] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem(STORE) || "{}").activityDays ?? []; } catch { return []; } });
   const [tab, setTab] = useState<Tab>("today");
   const [title, setTitle] = useState("");
@@ -87,6 +83,7 @@ export default function App() {
   const [buddyLink, setBuddyLink] = useState("");
   const [buddySessionId, setBuddySessionId] = useState("");
   const [toast, setToast] = useState("");
+  const [rewardBurst, setRewardBurst] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [authReady, setAuthReady] = useState(!hasSupabaseConfig);
@@ -126,7 +123,7 @@ export default function App() {
         id: String(row.id), title: String(row.title), step: String(row.micro_step),
         createdAt: String(row.created_at), completed: Boolean(row.completed),
         reminderAt: row.reminder_at ? localInputDate(new Date(row.reminder_at)) : "",
-        note: String(row.progress_note ?? ""), estimate: Number(row.estimate_minutes ?? 15)
+        note: String(row.progress_note ?? ""), estimate: Number(row.estimate_minutes ?? 15), pointsAwarded: Number(row.points_awarded ?? 0)
       })));
     })();
     return () => { alive = false; };
@@ -229,14 +226,22 @@ export default function App() {
   }
   async function completeTask(id: string) {
     const task = tasks.find(t => t.id === id); if (!task || task.completed) return;
-    setTasks(v => v.map(t => t.id === id ? { ...t, completed: true } : t)); setPoints(v => v + 10); setActivityDays(v => [...new Set([...v, dayKey(new Date())])]);
-    if (supabase && session) { const { error } = await supabase.from("tasks").update({ completed: true }).eq("id", id); if (error) setToast("Saved on this device. Cloud update will retry next time."); }
-    setToast("A small win. +10 points");
+    const reward = Math.random() < 0.2 ? 35 : 10;
+    setTasks(v => v.map(t => t.id === id ? { ...t, completed: true, pointsAwarded: reward } : t));
+    setPoints(v => v + reward); setActivityDays(v => [...new Set([...v, dayKey(new Date())])]);
+    setRewardBurst(true); window.setTimeout(() => setRewardBurst(false), 650);
+    try { navigator.vibrate?.(12); } catch { /* Haptics are optional. */ }
+    if (supabase && session) {
+      const { error } = await supabase.from("tasks").update({ completed: true, points_awarded: reward }).eq("id", id);
+      if (error) setToast("Saved on this device. Cloud update will retry next time.");
+    }
+    setToast(reward === 35 ? "Bonus win! +10 points and a +25 bonus." : "A small win. +10 points");
   }
   async function undoTask(id: string) {
     const task = tasks.find(t => t.id === id); if (!task || !task.completed) return;
-    setTasks(v => v.map(t => t.id === id ? { ...t, completed: false } : t)); setPoints(v => Math.max(0, v - 10));
-    if (supabase && session) { const { error } = await supabase.from("tasks").update({ completed: false }).eq("id", id); if (error) setToast("Cloud update failed. The local change is kept."); }
+    const reward = task.pointsAwarded ?? 10;
+    setTasks(v => v.map(t => t.id === id ? { ...t, completed: false, pointsAwarded: 0 } : t)); setPoints(v => Math.max(0, v - reward));
+    if (supabase && session) { const { error } = await supabase.from("tasks").update({ completed: false, points_awarded: 0 }).eq("id", id); if (error) setToast("Cloud update failed. The local change is kept."); }
     setToast("Task moved back to today.");
   }
   function startFocus(id: string) {
@@ -413,6 +418,7 @@ export default function App() {
         <footer className="bottom-note">YOUR PLACE IS SAVED. NO CATCHING UP NEEDED.</footer>
       </div>
     </section>
+    {rewardBurst && <div className="reward-burst" aria-hidden="true"><span>✦</span><span>✧</span><span>✦</span><span>✧</span><span>✦</span></div>}
     {toast && <div className="toast" role="status">{toast}</div>}
   </main>;
 }
