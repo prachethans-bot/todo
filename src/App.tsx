@@ -388,7 +388,7 @@ export default function App() {
                   <span><StarIcon/>Grow Your Streak</span>
                 </div>
               </div>
-              <div className="hero-art"><div className="moon"/><img src="/stay-hard-hero.jpg" alt="Smiling illustrated character in a straw hat"/><div className="art-fade"/></div>
+              <div className="hero-art"><div className="moon"/><img src="/vinai-hero.jpg" alt="Smiling illustrated character in a straw hat"/><div className="art-fade"/></div>
             </section>
 
             <section className="today-card" id="workspace">
