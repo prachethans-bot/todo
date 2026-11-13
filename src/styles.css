@@ -5,8 +5,7 @@
   --text-1:#fff;--text-2:#d9d9d9;--text-3:#d0d0d0;--text-4:#c8c8c8;--text-5:#bdbdbd;--text-6:#b4b4b4;--text-inactive:#9b9b9b;--text-done:#6e6e6e;
   --icon-1:#fff;--icon-muted:#b0b0b0;--icon-inactive:#9b9b9b;--ring-checkbox:#bdbdbd;--red-dot:#e5392f;
   --metal-text:linear-gradient(180deg,#fff 0%,#dcdcdc 28%,#a6a6a6 62%,#e8e8e8 100%);
-  --metal-ring:conic-gradient(from 210deg,#f5f5f5,#6b6b6b,#cfcfcf,#4a4a4a,#f5f5f5);
-  --silver-button:radial-gradient(circle at 35% 30%,#f4f4f4 0%,#c6c6c6 45%,#8a8a8a 100%);
+    --silver-button:radial-gradient(circle at 35% 30%,#f4f4f4 0%,#c6c6c6 45%,#8a8a8a 100%);
   --glass-down:linear-gradient(180deg,#161616 0%,#0a0a0a 55%,#050505 100%);
   font-family:Inter,Arial,sans-serif;color-scheme:dark;background:#000;color:#fff;font-synthesis:none;text-rendering:optimizeLegibility;
 }
@@ -57,8 +56,6 @@ button,input,textarea,select{font:inherit}button{cursor:pointer;color:inherit}bu
 .task-main{flex:1;min-width:0}
 .task-main h3{font-size:calc(30 * var(--u));font-weight:500;line-height:1.18;margin:0 0 calc(9 * var(--u));color:#fff;overflow-wrap:anywhere}
 .task-main p{font-size:calc(22 * var(--u));font-weight:400;line-height:1.2;margin:0;color:var(--text-6)}
-.task-chevron{border:0;background:transparent;color:var(--icon-muted);padding:0;display:grid;place-items:center}
-.task-chevron svg{width:calc(32 * var(--u));height:calc(32 * var(--u))}
 .task-card.is-sliding-away{pointer-events:none;animation:task-slide-away .36s cubic-bezier(.22,.72,.2,1) forwards}
 @keyframes task-slide-away{0%{opacity:1;transform:translateX(0);max-height:calc(150 * var(--u))}65%{opacity:.24;transform:translateX(110%)}100%{opacity:0;transform:translateX(120%);max-height:0;padding-top:0;padding-bottom:0;margin:0;border-width:0;min-height:0}}
 .completed-section{margin-top:calc(22 * var(--u))}
