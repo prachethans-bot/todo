@@ -28,12 +28,12 @@ jobs:
           done
           cat /tmp/todo-preview.log
           exit 1
-      - name: Check 3D hero in Chromium
+      - name: Run Vinai browser smoke tests
         run: node scripts/browser-smoke.mjs
       - name: Upload browser screenshot
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: todo-for-adhd-browser-check
-          path: hero3d-browser-check.png
+          name: vinai-browser-check
+          path: vinai-mobile-browser-check.png
           if-no-files-found: ignore

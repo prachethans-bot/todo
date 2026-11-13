@@ -1,37 +1,72 @@
-# வினை (Vinai) — ADHD-friendly task and focus app
+# வினை — fresh ADHD-friendly task and focus app
 
-வினை turns overwhelming tasks into small, clear next actions. The UI uses the monochrome silver-on-black design exported from the supplied Figma Make archive. The original app's task engine, storage, notifications, focus sessions, rewards, buddy flow, Supabase integration, and Capacitor Android shell are preserved.
+வினை is a low-pressure task, focus, timed-planning, and accountability app. This branch rebuilds the product experience while keeping the repository's `main` branch untouched.
 
-## Included features
+## Implemented
 
-- Four AI helper modes: new task, next step, too hard, and time check, with a local fallback when connected AI is unavailable.
-- Saved tasks with estimates, actual-time feedback, local persistence, and optional authenticated Supabase sync.
-- Native Android scheduled reminders with repeat notifications, snooze, a round clock picker, and a browser-only fallback while the tab is active.
-- A written AI task confirmation screen. It checks the user's update against the saved task and micro-step, rejects unrelated updates, and removes verified tasks from the active list. Camera/photo proof is not included.
-- Focus sessions, adjustable timers, editable next-action and progress notes, check-ins, pause/resume, and focus-completion points.
-- Points, occasional bonus points, streaks, sound, haptics, visual rewards, and undo.
-- Optional accountability-buddy invitations, controlled status sharing, pause/disconnect, and cheers.
-- Timed multi-step planner with editable work/break durations and reminder support.
+- Phone-first monochrome black, graphite, and silver interface with a Tamil wordmark.
+- Today, Timed plan, and My buddy sections.
+- Email/password sign-up and sign-in through Supabase Auth.
+- Private task CRUD using the existing `public.tasks` table and authenticated-user RLS policies.
+- Server-side AI microsteps through `stepwise-assistant`, with a local fallback.
+- AI-generated timed plans through the new `timed-plan-assistant` Edge Function, with a local fallback.
+- Editable plan steps and durations (15–240 minute total plan length).
+- Focus timer with pause/resume, saved progress notes, and a small-step reset.
+- Instant checkbox completion, +10 points, a 1-in-5 +25 bonus, undo, a brief reward animation, soft sound, and optional vibration.
+- Local activity-day streak and points.
+- Private buddy invitation links and focus-status sharing using the existing buddy RPC functions.
+- Android local reminders through Capacitor Local Notifications.
+- PWA manifest, Tamil icon, and an offline app-shell cache.
 
-## Local development
+## Backend
+
+The existing Supabase project is reused. It already has authenticated task RLS, buddy RPC functions, and the `stepwise-assistant` function. This branch adds the `timed-plan-assistant` function and a `points_awarded` column on tasks.
+
+AI provider credentials remain in Supabase Edge Function secrets. The browser only uses the public Supabase URL and publishable/anon key.
+
+## Run locally
+
+Requirements: Node.js 20 or newer.
 
 ```bash
-npm install
+cp .env.example .env
+npm ci
 npm run dev
-npm run build
 ```
 
-## Environment
+Set `VITE_PUBLIC_URL` to the deployed web origin when building the Android app so buddy invite links open the web invitation page.
 
-Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` for authentication, cloud sync, AI verification, and buddy invites. Provider keys must stay in Supabase Edge Function secrets. The existing functions are `stepwise-assistant` and `verify-task-start`; the latter uses `GEMINI_API_KEY` server-side.
+## Production web build
 
-## Android APK
+```bash
+npm run build
+npm run preview
+```
 
-The repository contains the Capacitor Android project and GitHub Actions APK workflow. A push to `main` that changes app source or public assets triggers a build, publishes the debug APK artifact, and refreshes the `latest` release asset. Native reminders use Android local notifications and are subject to device notification, exact-alarm, and battery settings.
+GitHub Actions runs a TypeScript/Vite production build on the fresh branch and uploads the `dist` artifact.
 
-## Important behavior
+## Android
 
-- Completing a task opens a separate written-confirmation screen, never a camera.
-- A relevant written update is verified server-side, saved as a progress note, and the task slides away from the active list.
-- Unrelated or generic updates are rejected with guidance, leaving the task active.
-- Local task storage is available without signing in. AI verification and cloud buddy features require a configured, signed-in Supabase account.
+The Today hero uses the character artwork cropped from the latest generated Vinai concept image in the ChatGPT Library.
+
+The Capacitor application ID is `com.vinai.focus`.
+
+```bash
+npm run cap:sync
+npm run cap:android
+```
+
+Build a debug or signed release APK from Android Studio. The `Fresh Vinai Android APK` GitHub Actions workflow also builds a debug APK on pushes and pull requests to this branch and uploads it as the `vinai-debug-apk` artifact. Android local notifications are scheduled with the OS and can fire while the app is closed, subject to notification permission, exact-alarm policy, battery restrictions, and device-vendor behavior.
+
+## Not yet verified / remaining work
+
+- Vercel preview builds are still pending; inspect the build and runtime logs before calling the web release ready.
+- Supabase Auth email confirmation, redirect URLs, and password-reset flow need a real account test.
+- Physical Android tests are required for notification permission, app-closed delivery, device reboot, and battery optimization.
+- Repeating alarms, snooze, exact-alarm permission education, and reboot rescheduling are not yet implemented in this fresh branch.
+- Points and streaks are stored locally, not in a server-authoritative per-user ledger.
+- Timed-plan edits are currently session state and are not persisted to the cloud.
+- Offline cloud-write reconciliation and multi-device conflict handling are not implemented.
+- Buddy invitation and status sharing need a two-account end-to-end test.
+
+The task checkbox completes immediately. There is no camera/photo proof flow in this fresh UI.

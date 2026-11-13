@@ -1,5 +1,5 @@
-const CACHE_NAME = "todo-for-adhd-v2";
-const APP_SHELL = ["/", "/manifest.webmanifest", "/logo-192.png"];
+const CACHE_NAME = "vinai-v1";
+const APP_SHELL = ["/", "/manifest.webmanifest", "/vinai-icon.svg", "/favicon.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
@@ -9,7 +9,7 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((key) => key.startsWith("todo-for-adhd-") && key !== CACHE_NAME).map((key) => caches.delete(key)))
+      Promise.all(keys.filter((key) => key.startsWith("vinai-") && key !== CACHE_NAME).map((key) => caches.delete(key)))
     )
   );
   self.clients.claim();
