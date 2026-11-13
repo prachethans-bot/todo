@@ -257,7 +257,7 @@ export default function App() {
         if (permission.display !== "granted") permission = await LocalNotifications.requestPermissions();
         if (permission.display !== "granted") { setToast("Allow notifications for Vinai in Android settings so reminders can ring."); return; }
         const exactSetting = await LocalNotifications.checkExactNotificationSetting();
-        if (!exactSetting.exactAlarm) {
+        if (!exactSetting.exact_alarm) {
           setToast("Enable Alarms & reminders for Vinai in Android settings for on-time alarms.");
           await LocalNotifications.changeExactNotificationSetting();
         }
