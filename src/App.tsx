@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import {
-  AlarmClock, ArrowRight, Bell, Check, CheckCircle2, ChevronRight, CircleHelp,
-  Flame, Pause, Play, Plus, RotateCcw, Share2, Sparkles, Square,
+  AlarmClock, ArrowRight, Bell, Check, CheckCircle2, CircleHelp,
+  Flame, Pause, Pencil, Play, Plus, RotateCcw, Share2, ShieldCheck, Sparkles, Square,
   Trash2, UserRound, X
 } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
@@ -14,6 +14,7 @@ import { buildInviteLink, createInvite, loadLocalBuddy, pushBuddyStatus, saveLoc
 type Task = {
   id: string; title: string; step: string; createdAt: string; completed: boolean;
   reminderAt: string; reminderFired?: boolean; note: string; estimate: number; pointsAwarded?: number;
+  requiresVerification?: boolean;
 };
 type PlanStep = { id: string; title: string; minutes: number; kind: "setup" | "focus" | "reset" | "wrap"; done: boolean };
 type Tab = "today" | "plan" | "buddy";
@@ -76,6 +77,14 @@ export default function App() {
   const [tab, setTab] = useState<Tab>("today");
   const [title, setTitle] = useState("");
   const [reminder, setReminder] = useState("");
+  const [requiresVerification, setRequiresVerification] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editRequiresVerification, setEditRequiresVerification] = useState(false);
+  const [verificationTask, setVerificationTask] = useState<Task | null>(null);
+  const [verificationText, setVerificationText] = useState("");
+  const [verificationError, setVerificationError] = useState("");
+  const [verificationBusy, setVerificationBusy] = useState(false);
   const [focusTask, setFocusTask] = useState<string | null>(null);
   const [focusMinutes, setFocusMinutes] = useState(15);
   const [remaining, setRemaining] = useState(0);
@@ -134,7 +143,8 @@ export default function App() {
         id: String(row.id), title: String(row.title), step: String(row.micro_step),
         createdAt: String(row.created_at), completed: Boolean(row.completed),
         reminderAt: row.reminder_at ? localInputDate(new Date(row.reminder_at)) : "",
-        note: String(row.progress_note ?? ""), estimate: Number(row.estimate_minutes ?? 15), pointsAwarded: Number(row.points_awarded ?? 0)
+        note: String(row.progress_note ?? ""), estimate: Number(row.estimate_minutes ?? 15), pointsAwarded: Number(row.points_awarded ?? 0),
+        requiresVerification: Boolean(row.requires_verification ?? false)
       })));
     })();
     return () => { alive = false; };
@@ -146,11 +156,24 @@ export default function App() {
   useEffect(() => {
     if (!running && !planRunning) return;
     const id = window.setInterval(() => {
-      if (running) setRemaining(v => { if (v <= 1) { setRunning(false); setToast("Your focus time is complete. Any progress counts."); return 0; } return v - 1; });
+      if (running) setRemaining(v => {
+        if (v <= 1) {
+          setRunning(false);
+          const target = tasks.find(task => task.id === focusTask);
+          if (target?.requiresVerification) {
+            setVerificationTask(target);
+            setVerificationText("");
+            setVerificationError("");
+            setToast("Focus time is complete. Add a short update to verify this task.");
+          } else setToast("Your focus time is complete. Any progress counts.");
+          return 0;
+        }
+        return v - 1;
+      });
       if (planRunning) setPlanRemaining(v => { if (v <= 1) { setPlanRunning(false); setToast("This step is complete. Your place is saved."); return 0; } return v - 1; });
     }, 1000);
     return () => window.clearInterval(id);
-  }, [running, planRunning]);
+  }, [running, planRunning, tasks, focusTask]);
   useEffect(() => {
     if (Capacitor.isNativePlatform()) return;
     const checkDue = () => {
@@ -223,16 +246,17 @@ export default function App() {
     const clean = title.trim();
     if (!clean) { setToast("Add a task name first."); return; }
     const step = await askAssistant(clean, "NEW_TASK");
-    let task: Task = { id: crypto.randomUUID(), title: clean, step, createdAt: new Date().toISOString(), completed: false, reminderAt: reminder, reminderFired: false, note: "", estimate: 15 };
+    let task: Task = { id: crypto.randomUUID(), title: clean, step, createdAt: new Date().toISOString(), completed: false, reminderAt: reminder, reminderFired: false, note: "", estimate: 15, requiresVerification };
     if (supabase && session) {
       const { data, error } = await supabase.from("tasks").insert({
         user_id: session.user.id, title: clean, mode: "NEW_TASK", micro_step: step,
-        reminder_at: reminder ? new Date(reminder).toISOString() : null, estimate_minutes: 15
+        reminder_at: reminder ? new Date(reminder).toISOString() : null, estimate_minutes: 15,
+        requires_verification: requiresVerification
       }).select().single();
       if (error) { setToast("Could not save this task to your account. Please try again."); return; }
       if (data) task = { ...task, id: String(data.id), createdAt: String(data.created_at) };
     }
-    setTasks(v => [task, ...v]); setTitle(""); setReminder(""); setToast("Your task is here. Start whenever you’re ready.");
+    setTasks(v => [task, ...v]); setTitle(""); setReminder(""); setRequiresVerification(false); setToast("Your task is here. Start whenever you’re ready.");
     void scheduleReminder(task);
   }
   function playRewardSound() {
@@ -251,8 +275,13 @@ export default function App() {
     } catch { /* Sound is optional when audio is unavailable. */ }
   }
 
-  async function completeTask(id: string) {
+  async function completeTask(id: string, verified = false) {
     const task = tasks.find(t => t.id === id); if (!task || task.completed || slidingTaskId) return;
+    if (task.requiresVerification && !verified) {
+      startFocus(id);
+      setToast("Focus session started. Verification will open when the timer finishes.");
+      return;
+    }
     setSlidingTaskId(id);
     window.setTimeout(async () => {
     const reward = Math.random() < 0.2 ? 35 : 10;
@@ -275,6 +304,67 @@ export default function App() {
     setTasks(v => v.map(t => t.id === id ? { ...t, completed: false, pointsAwarded: 0 } : t)); setPoints(v => Math.max(0, v - reward));
     if (supabase && session) { const { error } = await supabase.from("tasks").update({ completed: false, points_awarded: 0 }).eq("id", id); if (error) setToast("Cloud update failed. The local change is kept."); }
     setToast("Task moved back to today.");
+  }
+  function openEditTask(task: Task) {
+    setEditingTask(task);
+    setEditTitle(task.title);
+    setEditRequiresVerification(task.requiresVerification ?? false);
+  }
+  async function saveEditedTask(event: FormEvent) {
+    event.preventDefault();
+    if (!editingTask) return;
+    const clean = editTitle.trim();
+    if (!clean) { setToast("Add a task name first."); return; }
+    const updated = { ...editingTask, title: clean, requiresVerification: editRequiresVerification };
+    setTasks(current => current.map(task => task.id === updated.id ? updated : task));
+    if (supabase && session) {
+      const { error } = await supabase.from("tasks").update({
+        title: clean, requires_verification: editRequiresVerification
+      }).eq("id", updated.id);
+      if (error) setToast("Updated on this device. Cloud sync needs attention.");
+    }
+    setEditingTask(null);
+    setToast("Task updated.");
+  }
+  async function verifyAndCompleteTask(event: FormEvent) {
+    event.preventDefault();
+    const target = verificationTask;
+    const note = verificationText.trim();
+    if (!target || verificationBusy) return;
+    if (!note) { setVerificationError("Add a little detail about what you did or plan to do."); return; }
+    if (!supabase || !session) { setVerificationError("Sign in to use AI task verification. Your task is still saved."); return; }
+    setVerificationBusy(true);
+    setVerificationError("");
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-task-start", {
+        body: { taskTitle: target.title, microStep: target.step, userResponse: note }
+      });
+      if (error) throw new Error(error.message || "The AI checker could not be reached.");
+      if (!data || typeof data.approved !== "boolean") throw new Error("The AI checker returned an unexpected response.");
+      if (!data.approved) {
+        setVerificationError(typeof data.reason === "string" && data.reason.trim()
+          ? data.reason
+          : "Add a relevant detail about this task and try again.");
+        return;
+      }
+      setVerificationTask(null);
+      setVerificationText("");
+      setVerificationError("");
+      setFocusTask(null);
+      setRunning(false);
+      setRemaining(0);
+      await completeTask(target.id, true);
+    } catch (error) {
+      setVerificationError(error instanceof Error ? error.message : "AI checking is unavailable right now. Try again.");
+    } finally {
+      setVerificationBusy(false);
+    }
+  }
+  function cancelVerification() {
+    setVerificationTask(null);
+    setVerificationText("");
+    setVerificationError("");
+    void stopFocus();
   }
   function startFocus(id: string) {
     const task = tasks.find(t => t.id === id); const sessionId = crypto.randomUUID();
@@ -395,7 +485,7 @@ export default function App() {
               <div className="today-heading"><div className="today-label"><SunIcon/><h2>Today</h2></div><div className="date-label">{new Date().toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"})}<CalendarIcon/></div></div>
               <div className="task-list">
                 {openTasks.map((task,index)=><article className={`task-card ${slidingTaskId===task.id?"is-sliding-away":""}`} key={task.id}>
-                  <div className="task-top"><button className="check-button" aria-label="Complete task" onClick={()=>completeTask(task.id)} disabled={slidingTaskId!==null}/><div className="task-main"><h3>{task.title}</h3><p>{task.step || "Small step. Big difference."}</p></div><button className="task-chevron" aria-label="Task options" onClick={()=>startFocus(task.id)}><ChevronRight size={23}/></button></div>
+                  <div className="task-top"><button className="check-button" aria-label="Complete task" onClick={()=>completeTask(task.id)} disabled={slidingTaskId!==null}/><div className="task-main"><h3>{task.title}</h3><p>{task.step || "Small step. Big difference."}</p>{task.requiresVerification && <span className="verification-badge"><ShieldCheck size={13}/> Verification needed</span>}</div><button className="task-edit-button" aria-label={`Edit ${task.title}`} onClick={()=>openEditTask(task)}><Pencil size={17}/></button></div>
                 </article>)}
                 {openTasks.length===0 && <div className="empty-state"><Sparkles/><h3>Nothing waiting here.</h3><p>Add one small thing whenever it comes to mind.</p></div>}
               </div>
@@ -428,7 +518,9 @@ export default function App() {
           {focusTask && <section className="glass focus-panel"><div className="focus-head"><div><p className="eyebrow">FOCUS SPACE</p><h2>{activeTask?.title??"A little focus time"}</h2></div><button className="quiet-icon" aria-label="Close focus" onClick={stopFocus}><X/></button></div><p className="focus-step">{activeTask?.step}</p><div className="timer-display">{fmt(remaining)}</div><div className="focus-controls"><button className="primary-button" onClick={()=>setRunning(v=>!v)}>{running?<Pause/>:<Play/>}{running?"Pause":"Resume"}</button><button className="secondary-button" onClick={stopFocus}><Square/> Stop</button></div><label className="note-label">A note to your future self<textarea value={focusNote} onChange={e=>setFocusNote(e.target.value)} placeholder="Where should you pick up again?"/></label></section>}
         </div>
 
-        {showAddTask && <div className="add-sheet-backdrop" onClick={()=>setShowAddTask(false)}><form className="add-sheet glass" onClick={e=>e.stopPropagation()} onSubmit={async e=>{await addTask(e);setShowAddTask(false);}}><div className="sheet-grip"/><div className="sheet-heading"><h2>Add a Task</h2><button type="button" className="quiet-icon" onClick={()=>setShowAddTask(false)} aria-label="Close"><X/></button></div><label htmlFor="task-title">What’s one small thing?</label><input id="task-title" value={title} onChange={e=>setTitle(e.target.value)} placeholder="Add one thing to your mind…" maxLength={180}/><label className="reminder-field"><Bell size={15}/> Reminder <input aria-label="Optional reminder" type="datetime-local" value={reminder} min={localInputDate(new Date())} onChange={e=>setReminder(e.target.value)}/></label><button className="primary-button full-button" type="submit">Add task <ArrowRight size={16}/></button></form></div>}
+        {showAddTask && <div className="add-sheet-backdrop" onClick={()=>setShowAddTask(false)}><form className="add-sheet glass" onClick={e=>e.stopPropagation()} onSubmit={async e=>{await addTask(e);setShowAddTask(false);}}><div className="sheet-grip"/><div className="sheet-heading"><h2>Add a Task</h2><button type="button" className="quiet-icon" onClick={()=>setShowAddTask(false)} aria-label="Close"><X/></button></div><label htmlFor="task-title">What’s one small thing?</label><input id="task-title" value={title} onChange={e=>setTitle(e.target.value)} placeholder="Add one thing to your mind…" maxLength={180}/><label className="verification-toggle"><input type="checkbox" checked={requiresVerification} onChange={e=>setRequiresVerification(e.target.checked)}/><span>Verification needed</span></label><label className="reminder-field"><Bell size={15}/> Reminder <input aria-label="Optional reminder" type="datetime-local" value={reminder} min={localInputDate(new Date())} onChange={e=>setReminder(e.target.value)}/></label><button className="primary-button full-button" type="submit">Add task <ArrowRight size={16}/></button></form></div>}
+        {editingTask && <div className="add-sheet-backdrop" onClick={()=>setEditingTask(null)}><form className="add-sheet glass" onClick={e=>e.stopPropagation()} onSubmit={saveEditedTask}><div className="sheet-grip"/><div className="sheet-heading"><h2>Edit task</h2><button type="button" className="quiet-icon" onClick={()=>setEditingTask(null)} aria-label="Close"><X/></button></div><label htmlFor="edit-task-title">Task name</label><input id="edit-task-title" value={editTitle} onChange={e=>setEditTitle(e.target.value)} maxLength={180}/><label className="verification-toggle"><input type="checkbox" checked={editRequiresVerification} onChange={e=>setEditRequiresVerification(e.target.checked)}/><span>Verification needed</span></label><button className="primary-button full-button" type="submit">Save changes <Check size={16}/></button></form></div>}
+        {verificationTask && <div className="task-verification-overlay" role="dialog" aria-modal="true" aria-label="Verify task completion"><form className="task-verification-card" onSubmit={verifyAndCompleteTask}><button type="button" className="task-verification-cancel" onClick={cancelVerification} disabled={verificationBusy}>Cancel verification</button><p className="eyebrow">TASK CHECK</p><h2>Tell us what you did.</h2><p className="muted-copy">Your focus timer is complete. Add a short update so the AI can check that it matches this task.</p><div className="task-verification-context"><small>YOUR TASK</small><strong>{verificationTask.title}</strong><p>{verificationTask.step}</p></div><label htmlFor="verification-update">Your update</label><textarea id="verification-update" rows={5} value={verificationText} onChange={e=>setVerificationText(e.target.value)} placeholder="Write what you did or the next concrete action you took…"/>{verificationError && <p className="task-verification-error" role="alert">{verificationError}</p>}<button className="primary-button full-button" type="submit" disabled={verificationBusy || !verificationText.trim()}>{verificationBusy ? "Checking…" : "Verify and complete"} <Check size={16}/></button></form></div>}
 
         <div className="bottom-stack"><button className="add-task-button" onClick={()=>setShowAddTask(true)}><Plus size={28}/>Add a Task</button>
           <nav className="bottom-nav" aria-label="Main sections">
