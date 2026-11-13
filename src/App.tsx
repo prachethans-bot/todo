@@ -24,6 +24,42 @@ const localInputDate = (date: Date) => `${date.getFullYear()}-${pad(date.getMont
 const fmt = (seconds: number) => `${pad(Math.floor(Math.max(0,seconds)/60))}:${pad(Math.max(0,seconds)%60)}`;
 function dayKey(date: Date) { return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}`; }
 function streakFromDays(days: string[]) { const set = new Set(days); const today = new Date(); let cursor = new Date(today); if (!set.has(dayKey(cursor))) cursor.setDate(cursor.getDate()-1); let count = 0; while (set.has(dayKey(cursor))) { count++; cursor.setDate(cursor.getDate()-1); } return count; }
+
+const REMINDER_CHANNEL_ID = "vinai-task-reminders-v2";
+let reminderAudioContext: AudioContext | null = null;
+function unlockReminderAudio() {
+  if (typeof window === "undefined" || !("AudioContext" in window)) return;
+  try {
+    reminderAudioContext ??= new AudioContext();
+    if (reminderAudioContext.state === "suspended") void reminderAudioContext.resume();
+  } catch { /* Browser audio is optional. */ }
+}
+function playReminderAlarm() {
+  const context = reminderAudioContext;
+  if (!context || context.state !== "running") return;
+  const start = context.currentTime + 0.04;
+  for (let cycle = 0; cycle < 3; cycle++) {
+    for (const [offset, frequency] of [[0, 784], [0.28, 988]] as const) {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      const at = start + cycle * 0.82 + offset;
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(frequency, at);
+      gain.gain.setValueAtTime(0.0001, at);
+      gain.gain.exponentialRampToValueAtTime(0.12, at + 0.018);
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.22);
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start(at);
+      oscillator.stop(at + 0.24);
+    }
+  }
+}
+function reminderNotificationId(taskId: string) {
+  let hash = 2166136261;
+  for (let i = 0; i < taskId.length; i++) hash = Math.imul(hash ^ taskId.charCodeAt(i), 16777619);
+  return (hash >>> 0) % 2000000000 + 1;
+}
 function makeStep(title: string, mode: "NEW_TASK" | "TOO_HARD" = "NEW_TASK") {
   const clean = title.trim();
   if (mode === "TOO_HARD") return clean.length > 18 ? "Look at the first thing you need." : "Move closer to where you’ll begin.";
@@ -119,6 +155,17 @@ export default function App() {
   const activeTask = tasks.find(t => t.id === focusTask);
 
   useEffect(() => {
+    if (Capacitor.isNativePlatform()) return;
+    const unlock = () => unlockReminderAudio();
+    window.addEventListener("pointerdown", unlock, { passive: true });
+    window.addEventListener("keydown", unlock);
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!supabase) { setAuthReady(true); return; }
     let alive = true;
     void supabase.auth.getSession().then(({ data }) => {
@@ -183,8 +230,9 @@ export default function App() {
       setTasks(current => current.map(t => dueIds.has(t.id) ? { ...t, reminderFired: true } : t));
       for (const task of due) {
         setToast(`A small step is waiting: ${task.title}`);
+        playReminderAlarm();
         if ("Notification" in window && Notification.permission === "granted") {
-          try { new Notification("A small step is waiting", { body: task.title }); } catch { /* Browser notification unavailable. */ }
+          try { new Notification("A small step is waiting", { body: task.title, tag: `vinai-reminder-${task.id}`, requireInteraction: true }); } catch { /* Browser notification unavailable. */ }
         }
       }
     };
@@ -205,10 +253,24 @@ export default function App() {
     if (at.getTime() <= Date.now()) { setToast("Choose a reminder time in the future."); return; }
     if (Capacitor.isNativePlatform()) {
       try {
-        const permission = await LocalNotifications.requestPermissions();
-        if (permission.display !== "granted") { setToast("Notifications are not enabled on this device."); return; }
-        await LocalNotifications.schedule({ notifications: [{ id: Math.floor(Math.random()*2000000000)+1, title: "A small step is waiting", body: task.title, schedule: { at }, extra: { taskId: task.id } }] });
-        setToast("Reminder scheduled on this device.");
+        let permission = await LocalNotifications.checkPermissions();
+        if (permission.display !== "granted") permission = await LocalNotifications.requestPermissions();
+        if (permission.display !== "granted") { setToast("Allow notifications for Vinai in Android settings so reminders can ring."); return; }
+        const exactSetting = await LocalNotifications.checkExactNotificationSetting();
+        if (!exactSetting.exactAlarm) {
+          setToast("Enable Alarms & reminders for Vinai in Android settings for on-time alarms.");
+          await LocalNotifications.changeExactNotificationSetting();
+        }
+        await LocalNotifications.schedule({ notifications: [{
+          id: reminderNotificationId(task.id),
+          title: "A small step is waiting",
+          body: task.title,
+          channelId: REMINDER_CHANNEL_ID,
+          schedule: { at, allowWhileIdle: true },
+          extra: { taskId: task.id },
+          autoCancel: true
+        }] });
+        setToast("Audible reminder scheduled on this device.");
       } catch { setToast("The reminder could not be scheduled on this device."); }
     } else if ("Notification" in window) {
       try {
@@ -283,6 +345,9 @@ export default function App() {
       return;
     }
     setSlidingTaskId(id);
+    if (Capacitor.isNativePlatform()) {
+      void LocalNotifications.cancel({ notifications: [{ id: reminderNotificationId(task.id) }] }).catch(() => {});
+    }
     window.setTimeout(async () => {
     const reward = Math.random() < 0.2 ? 35 : 10;
     setTasks(v => v.map(t => t.id === id ? { ...t, completed: true, pointsAwarded: reward } : t));
