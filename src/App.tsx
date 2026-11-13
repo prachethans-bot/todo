@@ -457,7 +457,7 @@ export default function App() {
         <div className="scroll-column">
           <header className="topbar">
             <div className="brand-lockup">
-              <div className="brand-mark"><span lang="ta">வினை</span></div>
+              
               <div className="brand-word" lang="ta">வினை</div>
             </div>
             <div className="header-actions">
